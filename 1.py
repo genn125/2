@@ -2,7 +2,7 @@ class Goat:
     age = 0  # классовый атрибут
 
 
-    def pet (self):
+    def pet ():
         print('Коза говорит: Meeeeee')
     pet()
 b = Goat()
