@@ -3,13 +3,13 @@ import subprocess
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
 from collections import defaultdict
-
+import inspect
 
 class MusicCollectionApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Твоя Музыка")
-        self.root.geometry("1000x1000")
+        self.root.geometry("1000x900")
 
         # Путь к foobar2000 (замените на ваш)
         self.foobar_path = r"C:\Program Files (x86)\foobar2000\foobar2000.exe"
@@ -206,17 +206,38 @@ class MusicCollectionApp:
                 )
                 self._build_tree_recursive(folder_id, content)
 
+    # def search_music(self, query):
+    #     """Поиск по коллекции"""
+    #     query = query.lower().strip()
+    #     if not query:
+    #         for item in self.tree.get_children():
+    #             self.tree.item(item, open=False)
+    #             self._reset_item_visibility(item)
+    #         return
+    #
+    #     for item in self.tree.get_children():
+    #         self._search_item(item, query)
+
     def search_music(self, query):
-        """Поиск по коллекции"""
+        """Обновленная функция поиска с сохранением исходных данных"""
         query = query.lower().strip()
+
+        # Всегда работаем с полной копией данных
+        if not hasattr(self, '_original_library'):
+            self._original_library = self.music_library.copy()
+
         if not query:
-            for item in self.tree.get_children():
-                self.tree.item(item, open=False)
-                self._reset_item_visibility(item)
+            # Показываем всё, если запрос пустой
+            self.music_library = self._original_library.copy()
+            self.update_tree_view()
             return
 
-        for item in self.tree.get_children():
-            self._search_item(item, query)
+        # Фильтрация (без изменения исходных данных)
+        filtered_library = defaultdict(lambda: defaultdict(dict))
+        # ... (ваша логика фильтрации) ...
+
+        self.music_library = filtered_library
+        self.update_tree_view()
 
     def _search_item(self, item, query):
         """Рекурсивный поиск элементов"""
@@ -409,12 +430,23 @@ class MusicCollectionApp:
             if path[-1] in current_node:
                 del current_node[path[-1]]
 
+    # def clear_library(self):
+    #     """Полная очистка библиотеки"""
+    #     if messagebox.askyesno("Подтверждение", "Очистить всю коллекцию?"):
+    #         self.music_library.clear()
+    #         self.update_tree_view()
+    #         self.status_bar.config(text="Коллекция очищена", fg="red")
+
     def clear_library(self):
-        """Полная очистка библиотеки"""
-        if messagebox.askyesno("Подтверждение", "Очистить всю коллекцию?"):
-            self.music_library.clear()
-            self.update_tree_view()
-            self.status_bar.config(text="Коллекция очищена", fg="red")
+        """Сбрасывает поиск и показывает всю коллекцию"""
+        # 1. Очищаем поле поиска
+        self.search_entry.delete(0, tk.END)
+
+        # 2. Сбрасываем фильтрацию
+        self.search_music("")  # Передаем пустой запрос
+
+        # 3. Обновляем статус
+        self.status_bar.config(text="Поиск сброшен. Показана вся коллекция", fg="green")
 
     def show_context_menu(self, event):
         """Отображение контекстного меню"""
@@ -424,7 +456,10 @@ class MusicCollectionApp:
             self.context_menu.post(event.x_root, event.y_root)
 
 
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = MusicCollectionApp(root)
     root.mainloop()
+
+print("Сейчас выполняется строка", inspect.currentframe().f_lineno)
