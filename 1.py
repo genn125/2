@@ -2,429 +2,266 @@ import os
 import subprocess
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
-from collections import defaultdict
 
 
 class MusicCollectionApp:
     def __init__(self, root):
-        """Инициализация главного окна приложения"""
         self.root = root
-        self.root.title("Твоя Музыка")  # Заголовок окна
-        self.root.geometry("1000x700")  # Размер окна
+        self.root.title("Музыкальная коллекция с foobar2000")
+        self.root.geometry("800x600")
 
-        # Конфигурация путей и форматов
-        self.foobar_path = r"C:\Program Files (x86)\foobar2000\foobar2000.exe"  # Путь к foobar2000
-        self.supported_formats = ('.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac', '.wma')  # Поддерживаемые форматы
+        # Путь к foobar2000 (измените на ваш)
+        self.foobar_path = r"D:\Музыка\!foobar2000\foobar2000.exe"
 
-        # Структуры данных
-        self.music_library = defaultdict(lambda: defaultdict(dict))  # Основное хранилище
-        self._original_library = None  # Резервная копия для восстановления после поиска
+        # Переменные для хранения данных
+        self.music_library = {}
+        self.current_playing = None
 
-        # Инициализация интерфейса
-        self._setup_ui()
+        # Создание интерфейса
+        self.create_widgets()
 
-    def _setup_ui(self):
-        """Создание пользовательского интерфейса"""
-        # Верхняя панель с заголовком
-        header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
-        header_frame.pack(fill=tk.X)
-        tk.Label(header_frame, text="ТВОЯ МУЗЫКА",
-                 font=('Arial', 14, 'bold'), bg="#f0f0f0").pack(side=tk.LEFT)
+        # Загрузка коллекции
+        self.load_collection()
 
-        # Панель инструментов
-        toolbar = tk.Frame(self.root, padx=5, pady=5)
-        toolbar.pack(fill=tk.X)
+    def create_widgets(self):
+        # Панель управления
+        control_frame = tk.Frame(self.root)
+        control_frame.pack(pady=10)
 
-        # Кнопки управления
-        buttons = [
-            ("📁 Сканировать папку", self.scan_folder),
-            ("🔍 Поиск", lambda: self.search_music(self.search_entry.get())),
-            ("🗑️ Сбросить поиск", self.reset_search)
-        ]
+        self.btn_add = tk.Button(control_frame, text="Добавить группу", command=self.add_artist)
+        self.btn_add.pack(side=tk.LEFT, padx=5)
 
-        for text, cmd in buttons:
-            btn = tk.Button(toolbar, text=text, command=cmd, bd=1, relief=tk.RIDGE, padx=10)
-            btn.pack(side=tk.LEFT, padx=2)
+        self.btn_add_album = tk.Button(control_frame, text="Добавить альбом", command=self.add_album)
+        self.btn_add_album.pack(side=tk.LEFT, padx=5)
 
-        # Поле поиска
-        search_frame = tk.Frame(self.root, pady=5)
-        search_frame.pack(fill=tk.X, padx=10)
-        self.search_entry = tk.Entry(search_frame)
-        self.search_entry.pack(fill=tk.X, padx=5, expand=True)
-        self.search_entry.bind("<KeyRelease>", lambda e: self.search_music(self.search_entry.get()))
+        self.btn_import = tk.Button(control_frame, text="Импортировать музыку", command=self.import_music)
+        self.btn_import.pack(side=tk.LEFT, padx=5)
+
+        # Поиск
+        search_frame = tk.Frame(self.root)
+        search_frame.pack(pady=10)
+
+        tk.Label(search_frame, text="Поиск:").pack(side=tk.LEFT)
+        self.search_entry = tk.Entry(search_frame, width=40)
+        self.search_entry.pack(side=tk.LEFT, padx=5)
+        self.search_entry.bind("<KeyRelease>", self.search_music)
 
         # Дерево коллекции
-        tree_frame = tk.Frame(self.root)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.tree = ttk.Treeview(self.root, columns=("Type", "Path"), show="tree")
+        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        self.tree = ttk.Treeview(tree_frame, columns=("type", "path"), show="tree", selectmode="extended")
+        # Плеер
+        player_frame = tk.Frame(self.root)
+        player_frame.pack(pady=10)
 
-        # Настройка стилей для дерева
-        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))
-        self.tree.tag_configure("file", background="white")
+        self.btn_play = tk.Button(player_frame, text="▶ Воспроизвести в foobar2000", command=self.play_music)
+        self.btn_play.pack(side=tk.LEFT, padx=5)
 
-        # Scrollbar для дерева
-        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(fill=tk.BOTH, expand=True)
+        self.btn_add_to_playlist = tk.Button(player_frame, text="＋ Добавить в плейлист", command=self.add_to_playlist)
+        self.btn_add_to_playlist.pack(side=tk.LEFT, padx=5)
 
-        # Панель управления плеером
-        player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
-        player_frame.pack(fill=tk.X)
-
-        # Кнопки управления плеером
-        player_controls = [
-            ("▶ Воспроизвести", self.play_selected),
-            ("⏏ В плейлист", self.add_to_playlist),
-            ("⏹ Стоп", self.stop_foobar)
-        ]
-
-        for text, cmd in player_controls:
-            btn = tk.Button(player_frame, text=text, command=cmd, bg="#f8f8f8", padx=10)
-            btn.pack(side=tk.LEFT, padx=5)
-
-        # Строка состояния
-        self.status_bar = tk.Label(player_frame, text="Готов к работе",
-                                   bg="#e0e0e0", fg="#333333", anchor=tk.W)
-        self.status_bar.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
+        self.current_track_label = tk.Label(player_frame, text="Трек не выбран")
+        self.current_track_label.pack(side=tk.LEFT, padx=10)
 
         # Контекстное меню
         self.context_menu = tk.Menu(self.root, tearoff=0)
-        self.context_menu.add_command(label="Воспроизвести", command=self.play_selected)
+        self.context_menu.add_command(label="Воспроизвести в foobar2000", command=self.play_selected)
         self.context_menu.add_command(label="Добавить в плейлист", command=self.add_to_playlist)
-        self.context_menu.add_separator()
-        self.context_menu.add_command(label="Открыть в проводнике", command=self.open_in_explorer)
         self.context_menu.add_command(label="Удалить", command=self.delete_item)
 
-        # Привязка событий
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", self.play_selected)
 
-    def scan_folder(self):
-        """Сканирование выбранной папки и добавление музыки в коллекцию"""
-        folder_path = filedialog.askdirectory(title="Выберите папку с музыкой")
-        if not folder_path:
+    def load_collection(self):
+        # Здесь можно добавить загрузку из файла
+        # В демо-версии просто очищаем дерево
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+
+    def add_artist(self):
+        artist_name = simpledialog.askstring("Добавить группу", "Введите название группы:")
+        if artist_name and artist_name not in self.music_library:
+            self.music_library[artist_name] = {}
+            self.tree.insert("", "end", text=artist_name, values=("artist", ""))
+
+    def add_album(self):
+        selected = self.tree.focus()
+        if not selected:
+            messagebox.showerror("Ошибка", "Выберите группу для добавления альбома")
             return
 
-        self.status_bar.config(text=f"Сканирование: {folder_path}", fg="blue")
-        self.root.update()  # Обновляем интерфейс
-
-        try:
-            # Сохраняем копию оригинальной библиотеки перед изменением
-            if not hasattr(self, '_original_library'):
-                self._original_library = defaultdict(lambda: defaultdict(dict))
-
-            # Рекурсивное сканирование
-            self._scan_folder_recursive(folder_path, self.music_library)
-            self._original_library = self.music_library.copy()
-            self.update_tree_view()
-            self.status_bar.config(text=f"Добавлено: {folder_path}", fg="green")
-        except Exception as e:
-            self.status_bar.config(text=f"Ошибка: {str(e)}", fg="red")
-
-    def _scan_folder_recursive(self, current_path, node):
-        """Рекурсивное сканирование папок"""
-        for entry in os.listdir(current_path):
-            full_path = os.path.join(current_path, entry)
-
-            if os.path.isdir(full_path):
-                # Обработка подпапки
-                if entry not in node:
-                    node[entry] = {}
-                self._scan_folder_recursive(full_path, node[entry])
-            elif entry.lower().endswith(self.supported_formats):
-                # Обработка аудиофайла
-                if "_files" not in node:
-                    node["_files"] = []
-                node["_files"].append((entry, full_path))
-
-    def update_tree_view(self):
-        """Обновление отображения дерева коллекции"""
-        self.tree.delete(*self.tree.get_children())  # Очищаем текущее отображение
-
-        # Рекурсивное построение дерева
-        self._build_tree_recursive("", self.music_library)
-
-    def _build_tree_recursive(self, parent_id, node):
-        """Рекурсивное построение элементов дерева"""
-        for name, content in node.items():
-            if name == "_files":
-                # Добавление файлов
-                for file_name, file_path in content:
-                    self.tree.insert(
-                        parent_id, "end",
-                        text=file_name,
-                        values=("file", file_path),
-                        tags=("file",)
-                    )
-            else:
-                # Добавление папки
-                folder_id = self.tree.insert(
-                    parent_id, "end",
-                    text=name,
-                    values=("folder", ""),
-                    tags=("folder",)
-                )
-                self._build_tree_recursive(folder_id, content)
-
-    def search_music(self, query):
-        """Фильтрация музыки по поисковому запросу"""
-        query = query.lower().strip()
-
-        # При первом поиске сохраняем оригинальную библиотеку
-        if not hasattr(self, '_original_library'):
-            self._original_library = self.music_library.copy()
-
-        if not query:
-            # Если запрос пустой - показываем всю коллекцию
-            self.music_library = self._original_library.copy()
-            self.update_tree_view()
+        item = self.tree.item(selected)
+        if item["values"][0] != "artist":
+            messagebox.showerror("Ошибка", "Выберите группу для добавления альбома")
             return
 
-        # Создаем отфильтрованную копию
-        filtered_library = defaultdict(lambda: defaultdict(dict))
+        artist_name = item["text"]
+        album_name = simpledialog.askstring("Добавить альбом", "Введите название альбома:")
+        year = simpledialog.askinteger("Добавить альбом", "Введите год выпуска:")
 
-        for artist, years in self._original_library.items():
-            artist_matches = query in artist.lower()
+        if album_name and year:
+            if year not in self.music_library[artist_name]:
+                self.music_library[artist_name][year] = {}
 
-            for year, albums in years.items():
-                for album_name, songs in albums.items():
-                    album_matches = (query in album_name.lower()) or artist_matches
-                    filtered_songs = [
-                        (song, path) for song, path in songs
-                        if (query in song.lower()) or album_matches
-                    ]
+            if album_name not in self.music_library[artist_name][year]:
+                self.music_library[artist_name][year][album_name] = []
+                album_id = self.tree.insert(selected, "end", text=f"{year} - {album_name}", values=("album", ""))
 
-                    if filtered_songs:
-                        # Сохраняем структуру папок
-                        if artist not in filtered_library:
-                            filtered_library[artist] = {}
-                        if year not in filtered_library[artist]:
-                            filtered_library[artist][year] = {}
-                        filtered_library[artist][year][album_name] = filtered_songs
+    def import_music(self):
+        selected = self.tree.focus()
+        if not selected:
+            messagebox.showerror("Ошибка", "Выберите альбом для импорта музыки")
+            return
 
-        self.music_library = filtered_library
-        self.update_tree_view()
-        self.status_bar.config(text=f"Найдено: {query}", fg="blue")
+        item = self.tree.item(selected)
+        if item["values"][0] != "album":
+            messagebox.showerror("Ошибка", "Выберите альбом для импорта музыки")
+            return
+
+        files = filedialog.askopenfilenames(title="Выберите музыкальные файлы",
+                                            filetypes=[("Audio Files", "*.mp3 *.wav *.ogg *.flac")])
+
+        if files:
+            parent = self.tree.parent(selected)
+            artist_item = self.tree.item(parent)
+            artist_name = artist_item["text"]
+
+            album_text = item["text"]
+            year, album_name = album_text.split(" - ", 1)
+            year = int(year)
+
+            for file_path in files:
+                song_name = os.path.basename(file_path)
+                self.music_library[artist_name][year][album_name].append((song_name, file_path))
+                self.tree.insert(selected, "end", text=song_name, values=("song", file_path))
+
+    def search_music(self, event=None):
+        query = self.search_entry.get().lower()
+
+        for item in self.tree.get_children():
+            self._search_item(item, query)
 
     def _search_item(self, item, query):
-        """Рекурсивный поиск элементов"""
         item_text = self.tree.item(item, "text").lower()
-
-        # Показываем/скрываем элементы
         if query in item_text:
-            self.tree.item(item, open=True)
-            self._highlight_parents(item)
+            self.tree.selection_add(item)
+            # Раскрываем родительские элементы
+            parent = self.tree.parent(item)
+            while parent:
+                self.tree.item(parent, open=True)
+                parent = self.tree.parent(parent)
         else:
-            self._hide_item_if_no_matches(item, query)
+            self.tree.selection_remove(item)
 
-        # Рекурсивная обработка дочерних элементов
+        # Рекурсивно проверяем дочерние элементы
         for child in self.tree.get_children(item):
             self._search_item(child, query)
 
-    def reset_search(self):
-        """Сброс результатов поиска и восстановление полной коллекции"""
-        self.search_entry.delete(0, tk.END)  # Очищаем поле поиска
-        self.search_music("")  # Сбрасываем фильтрацию
-        self.status_bar.config(text="Поиск сброшен. Показана вся коллекция", fg="green")
-
-    # ... (остальные методы: play_selected, add_to_playlist и т.д. остаются без изменений)
-
-    def _highlight_parents(self, item):
-        """Раскрытие родительских папок для найденного элемента"""
-        parent = self.tree.parent(item)
-        while parent:
-            self.tree.item(parent, open=True)
-            parent = self.tree.parent(parent)
-
-    def _hide_item_if_no_matches(self, item, query):
-        """Скрытие элементов, не соответствующих запросу"""
-        has_visible_children = any(
-            query in self.tree.item(child, "text").lower()
-            for child in self.tree.get_children(item)
-        )
-
-        if not has_visible_children and query not in self.tree.item(item, "text").lower():
-            self.tree.detach(item)
-
-    def _reset_item_visibility(self, item):
-        """Сброс видимости всех элементов"""
-        self.tree.reattach(item, self.tree.parent(item), "end")
-        for child in self.tree.get_children(item):
-            self._reset_item_visibility(child)
-
-    def play_selected(self, event=None):
-        """Воспроизведение выбранного"""
-        selected_items = self.tree.selection()
-        if not selected_items:
-            return
-
-        paths = []
-        names = []
-
-        for item in selected_items:
-            item_data = self.tree.item(item)
-            if item_data["values"][0] == "file":
-                paths.append(item_data["values"][1])
-                names.append(item_data["text"])
-            elif item_data["values"][0] == "folder":
-                self._collect_files_from_folder(item, paths, names)
-
-        if paths:
-            self._play_in_foobar(paths, " | ".join(names))
-
-    def _collect_files_from_folder(self, folder_item, paths, names):
-        """Сбор всех файлов из папки"""
-        for child in self.tree.get_children(folder_item):
-            child_data = self.tree.item(child)
-            if child_data["values"][0] == "file":
-                paths.append(child_data["values"][1])
-                names.append(child_data["text"])
-            elif child_data["values"][0] == "folder":
-                self._collect_files_from_folder(child, paths, names)
-
-    def _play_in_foobar(self, file_paths, display_name):
-        """Запуск воспроизведения в foobar2000"""
-        try:
-            subprocess.Popen([self.foobar_path, "/play"] + file_paths)
-            self.status_bar.config(text=f"Воспроизведение: {display_name[:50]}...", fg="blue")
-        except Exception as e:
-            messagebox.showerror("Ошибка", f"Не удалось запустить foobar2000:\n{str(e)}")
-
-    def add_to_playlist(self):
-        """Добавление в плейлист foobar2000"""
-        selected_items = self.tree.selection()
-        if not selected_items:
-            return
-
-        paths = []
-        for item in selected_items:
-            item_data = self.tree.item(item)
-            if item_data["values"][0] == "file":
-                paths.append(item_data["values"][1])
-            elif item_data["values"][0] == "folder":
-                self._collect_files_from_folder(item, paths, [])
-
-        if paths:
-            try:
-                subprocess.Popen([self.foobar_path, "/add"] + paths)
-                self.status_bar.config(text=f"Добавлено {len(paths)} треков в плейлист", fg="green")
-            except Exception as e:
-                messagebox.showerror("Ошибка", f"Не удалось добавить в плейлист:\n{str(e)}")
-
-    def stop_foobar(self):
-        """Остановка воспроизведения"""
-        try:
-            subprocess.Popen([self.foobar_path, "/stop"])
-            self.status_bar.config(text="Воспроизведение остановлено", fg="black")
-        except Exception as e:
-            messagebox.showerror("Ошибка", f"Не удалось остановить foobar2000:\n{str(e)}")
-
-    def open_in_explorer(self):
-        """Открытие папки в проводнике"""
+    def play_music(self):
         selected = self.tree.focus()
         if not selected:
             return
 
-        item_data = self.tree.item(selected)
-        if item_data["values"][0] == "file":
-            path = os.path.dirname(item_data["values"][1])
-        else:
-            path = self._find_folder_path(selected)
+        self.play_selected_item(selected)
 
-        if path and os.path.exists(path):
-            os.startfile(path)
+    def play_selected(self, event=None):
+        selected = self.tree.focus()
+        if not selected:
+            return
 
-    def _find_folder_path(self, folder_item):
-        """Поиск физического пути к папке в дереве"""
-        parts = []
-        current_item = folder_item
+        self.play_selected_item(selected)
 
-        while current_item:
-            item_data = self.tree.item(current_item)
-            parts.insert(0, item_data["text"])
-            current_item = self.tree.parent(current_item)
+    def play_selected_item(self, item_id):
+        item = self.tree.item(item_id)
 
-        # Попытка найти существующий путь
-        test_path = os.path.join(*parts)
-        if os.path.exists(test_path):
-            return test_path
+        if item["values"][0] == "song":
+            self._play_in_foobar([item["values"][1]], item["text"])
+        elif item["values"][0] == "album":
+            self._play_album(item_id)
 
-        return None
+    def _play_album(self, album_id):
+        paths = []
+        for child in self.tree.get_children(album_id):
+            item = self.tree.item(child)
+            if item["values"][0] == "song":
+                paths.append(item["values"][1])
+
+        if paths:
+            album_name = self.tree.item(album_id)["text"]
+            self._play_in_foobar(paths, f"Альбом: {album_name}")
+
+    def _play_in_foobar(self, file_paths, display_name):
+        try:
+            # Формируем команду для foobar2000
+            # /play немедленно начинает воспроизведение
+            # /add добавляет в текущий плейлист
+            command = [self.foobar_path, "/play"] + list(file_paths)
+
+            subprocess.Popen(command)
+            self.current_playing = file_paths[0] if len(file_paths) == 1 else file_paths
+            self.current_track_label.config(text=f"Воспроизводится в foobar2000: {display_name}")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось запустить foobar2000: {e}")
+
+    def add_to_playlist(self):
+        selected = self.tree.focus()
+        if not selected:
+            return
+
+        item = self.tree.item(selected)
+
+        if item["values"][0] == "song":
+            self._add_files_to_foobar([item["values"][1]], item["text"])
+        elif item["values"][0] == "album":
+            paths = []
+            for child in self.tree.get_children(selected):
+                child_item = self.tree.item(child)
+                if child_item["values"][0] == "song":
+                    paths.append(child_item["values"][1])
+
+            if paths:
+                album_name = item["text"]
+                self._add_files_to_foobar(paths, f"Альбом: {album_name}")
+
+    def _add_files_to_foobar(self, file_paths, display_name):
+        try:
+            # /add добавляет файлы в текущий плейлист без немедленного воспроизведения
+            command = [self.foobar_path, "/add"] + list(file_paths)
+
+            subprocess.Popen(command)
+            self.current_track_label.config(text=f"Добавлено в плейлист foobar2000: {display_name}")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось добавить в foobar2000: {e}")
 
     def delete_item(self):
-        """Удаление выбранных элементов"""
-        selected_items = self.tree.selection()
-        if not selected_items:
+        selected = self.tree.focus()
+        if not selected:
             return
 
-        confirm = messagebox.askyesno(
-            "Подтверждение",
-            f"Удалить {len(selected_items)} выбранных элементов?"
-        )
-        if not confirm:
-            return
+        item = self.tree.item(selected)
+        confirm = messagebox.askyesno("Подтверждение", f"Удалить '{item['text']}'?")
 
-        for item in selected_items:
-            self._delete_item_recursive(item)
+        if confirm:
+            # Удаляем из структуры данных
+            if item["values"][0] == "artist":
+                del self.music_library[item["text"]]
+            elif item["values"][0] == "album":
+                parent = self.tree.parent(selected)
+                artist_item = self.tree.item(parent)
+                artist_name = artist_item["text"]
+                album_text = item["text"]
+                year, album_name = album_text.split(" - ", 1)
+                year = int(year)
+                del self.music_library[artist_name][year][album_name]
 
-        self.update_tree_view()
-        self.status_bar.config(text=f"Удалено {len(selected_items)} элементов", fg="orange")
-
-    def _delete_item_recursive(self, item):
-        """Рекурсивное удаление элемента из структуры данных"""
-        parent = self.tree.parent(item)
-        if not parent:  # Корневой элемент
-            return
-
-        item_data = self.tree.item(item)
-        parent_data = self.tree.item(parent)
-
-        # Удаление из структуры данных
-        if parent == "":  # Верхний уровень
-            if item_data["text"] in self.music_library:
-                del self.music_library[item_data["text"]]
-        else:
-            # Находим соответствующий узел в структуре данных
-            current_node = self.music_library
-            path = []
-
-            # Строим путь от корня к элементу
-            current_item = item
-            while current_item and current_item != "":
-                path.insert(0, self.tree.item(current_item, "text"))
-                current_item = self.tree.parent(current_item)
-
-            # Находим родительский узел
-            for step in path[:-1]:
-                if step in current_node:
-                    current_node = current_node[step]
-                else:
-                    return
-
-            # Удаляем целевой узел
-            if path[-1] in current_node:
-                del current_node[path[-1]]
-
-    def clear_library(self):
-        """Полная очистка библиотеки"""
-        if messagebox.askyesno("Подтверждение", "Очистить всю коллекцию?"):
-            self.music_library.clear()
-            self.update_tree_view()
-            self.status_bar.config(text="Коллекция очищена", fg="red")
+            # Удаляем из дерева
+            self.tree.delete(selected)
 
     def show_context_menu(self, event):
-        """Отображение контекстного меню"""
         item = self.tree.identify_row(event.y)
         if item:
             self.tree.selection_set(item)
             self.context_menu.post(event.x_root, event.y_root)
-
-
-
-
-
 
 
 if __name__ == "__main__":
