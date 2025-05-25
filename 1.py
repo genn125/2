@@ -162,6 +162,7 @@ class MusicCollectionApp:
         if not selected:
             return
 
+
         self.play_selected_item(selected)
 
     def play_selected(self, event=None):
