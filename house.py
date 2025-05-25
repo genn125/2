@@ -4,7 +4,6 @@ def main():
 
     draw_house(x, y, width, height)
 
-
 def draw_house(x, y, width, height):
     """
     Нарисовать дом
