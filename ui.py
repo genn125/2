@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, Menu, messagebox, filedialog
+
 import os
+from datetime import datetime
 
 class MusicCollectionUI:
     def __init__(self, root, library, player):
@@ -33,17 +35,36 @@ class MusicCollectionUI:
             btn = tk.Button(toolbar, text=text, command=cmd, bd=1, relief=tk.RIDGE, padx=10)
             btn.pack(side=tk.LEFT, padx=10)
 
-        # Tree view (без поля поиска)
-        tree_frame = tk.Frame(self.root)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        self.tree = ttk.Treeview(tree_frame, columns=("type", "path"), show="tree", selectmode="extended")
-        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))
-        self.tree.tag_configure("file", background="white")
+            # Treeview версию с колонками
+            self.tree = ttk.Treeview(tree_frame, columns=("name", "path", "size", "date"), show="headings")
 
-        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(fill=tk.BOTH, expand=True)
+            # Настраиваем колонки
+            self.tree.heading("name", text="Название", anchor=tk.W)
+            self.tree.heading("path", text="Путь", anchor=tk.W)
+            self.tree.heading("size", text="Размер", anchor=tk.W)
+            self.tree.heading("date", text="Дата изменения", anchor=tk.W)
+
+            # Настраиваем параметры колонок
+            self.tree.column("name", width=200, stretch=tk.YES)
+            self.tree.column("path", width=300, stretch=tk.YES)
+            self.tree.column("size", width=100, stretch=tk.NO)
+            self.tree.column("date", width=150, stretch=tk.NO)
+
+            # Разрешаем изменение размера колонок
+            for col in ("name", "path", "size", "date"):
+                self.tree.heading(col, command=lambda _col=col: self._treeview_sort_column(_col, False))
+
+        # # Tree view (без поля поиска)
+        # tree_frame = tk.Frame(self.root)
+        # tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # self.tree = ttk.Treeview(tree_frame, columns=("type", "path"), show="tree", selectmode="extended")
+        # self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))
+        # self.tree.tag_configure("file", background="white")
+        #
+        # scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # self.tree.configure(yscrollcommand=scrollbar.set)
+        # self.tree.pack(fill=tk.BOTH, expand=True)
 
         # Player controls frame
         player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
@@ -76,6 +97,20 @@ class MusicCollectionUI:
         # Bindings
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
+
+    def _treeview_sort_column(self, col, reverse):
+        # Получаем все элементы
+        items = [(self.tree.set(k, col), k) for k in self.tree.get_children("")]
+
+        # Сортируем элементы
+        items.sort(reverse=reverse)
+
+        # Перемещаем элементы в отсортированном порядке
+        for index, (val, k) in enumerate(items):
+            self.tree.move(k, "", index)
+
+        # Устанавливаем обратную сортировку для следующего клика
+        self.tree.heading(col, command=lambda: self._treeview_sort_column(col, not reverse))
 
     def _scan_folder(self):
         folder_path = filedialog.askdirectory(title="Выберите папку с музыкой")
@@ -137,17 +172,21 @@ class MusicCollectionUI:
         for name, content in node.items():
             if name == "_files":
                 for file_name, file_path in content:
+                    # Получаем информацию о файле
+                    file_stats = os.stat(file_path)
+                    size = f"{file_stats.st_size / 1024:.1f} KB"
+                    date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
+
                     self.tree.insert(
                         parent_id, "end",
-                        text=file_name,
-                        values=("file", file_path),
+                        values=(file_name, file_path, size, date),
                         tags=("file",)
                     )
             else:
                 folder_id = self.tree.insert(
                     parent_id, "end",
                     text=name,
-                    values=("folder", ""),
+                    values=(name, "", "", ""),
                     tags=("folder",)
                 )
                 self._build_tree_recursive(folder_id, content)
