@@ -35,24 +35,33 @@ class MusicCollectionUI:
             btn = tk.Button(toolbar, text=text, command=cmd, bd=1, relief=tk.RIDGE, padx=10)
             btn.pack(side=tk.LEFT, padx=10)
 
-            # Treeview версию с колонками
-            self.tree = ttk.Treeview(tree_frame, columns=("name", "path", "size", "date"), show="headings")
+        # # Treeview версию с колонками
+        tree_frame = tk.Frame(self.root)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.tree = ttk.Treeview(tree_frame, columns=("name", "path", "size", "date"), show="headings")
+        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))# фон папок
+        self.tree.tag_configure("file", background="white")# фон файлов
 
-            # Настраиваем колонки
-            self.tree.heading("name", text="Название", anchor=tk.W)
-            self.tree.heading("path", text="Путь", anchor=tk.W)
-            self.tree.heading("size", text="Размер", anchor=tk.W)
-            self.tree.heading("date", text="Дата изменения", anchor=tk.W)
+        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(fill=tk.BOTH, expand=True)
 
-            # Настраиваем параметры колонок
-            self.tree.column("name", width=200, stretch=tk.YES)
-            self.tree.column("path", width=300, stretch=tk.YES)
-            self.tree.column("size", width=100, stretch=tk.NO)
-            self.tree.column("date", width=150, stretch=tk.NO)
+        # Настраиваем колонки
+        self.tree.heading("name", text="Название", anchor=tk.W)
+        self.tree.heading("path", text="Путь", anchor=tk.W)
+        self.tree.heading("size", text="Размер", anchor=tk.W)
+        self.tree.heading("date", text="Дата изменения", anchor=tk.W)
 
-            # Разрешаем изменение размера колонок
-            for col in ("name", "path", "size", "date"):
-                self.tree.heading(col, command=lambda _col=col: self._treeview_sort_column(_col, False))
+        # Настраиваем параметры колонок
+        self.tree.column("name", width=200, stretch=tk.YES)
+        self.tree.column("path", width=300, stretch=tk.YES)
+        self.tree.column("size", width=100, stretch=tk.NO)
+        self.tree.column("date", width=150, stretch=tk.NO)
+
+        # Разрешаем изменение размера колонок
+        for col in ("name", "path", "size", "date"):
+            self.tree.heading(col, command=lambda _col=col: self._treeview_sort_column(_col, False))
 
         # # Tree view (без поля поиска)
         # tree_frame = tk.Frame(self.root)
