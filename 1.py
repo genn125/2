@@ -1,11 +1,9 @@
 import os
+import subprocess
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from collections import defaultdict
-from docx import Document
-from docx.shared import Pt, RGBColor
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from foobar_controller import FoobarController
+
 
 class MusicCollectionApp:
     def __init__(self, root):
@@ -23,10 +21,7 @@ class MusicCollectionApp:
 
         # Инициализация интерфейса
         self._setup_ui()
-# ====================================
-        # Инициализация контроллера
-        self.foobar = FoobarController()
-#====================================
+
     def _setup_ui(self):
         """Создание пользовательского интерфейса"""
         # Верхняя панель с заголовком
@@ -46,16 +41,7 @@ class MusicCollectionApp:
             ("📁 Сканировать папку", self.scan_folder),
             ("🗑️ Очистить коллекцию", self.clear_library)
         ]
-        # 28.05.25 Добавьте кнопку в интерфейс (в метод _setup_ui):
-        #=============================================
-        btn_export = tk.Button(toolbar,
-                               text="💾 Экспорт в DOCX",
-                               command=self.export_to_docx,
-                               bd=1,
-                               relief=tk.RIDGE,
-                               padx=10)
-        btn_export.pack(side=tk.RIGHT, padx=2)
-        #=================================================
+
         for text, cmd in buttons:
             btn = tk.Button(toolbar, text=text, command=cmd, bd=1, relief=tk.RIDGE, padx=10)
             btn.pack(side=tk.LEFT, padx=2)
@@ -173,25 +159,6 @@ class MusicCollectionApp:
                 )
                 self._build_tree_recursive(folder_id, content)
 
-        # ==================================================================
-
-
-
-    # 28.05.25 Добавьте метод в класс MusicCollectionApp:
-    def export_to_docx(self):
-        """Экспорт коллекции в DOCX файл"""
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".docx",
-            filetypes=[("Word Documents", "*.docx")],
-            title="Сохранить коллекцию как"
-        )
-        if file_path:
-            if save_to_docx(self.music_library, file_path):
-                self.status_bar.config(text=f"Коллекция сохранена: {file_path}", fg="green")
-            else:
-                self.status_bar.config(text="Ошибка при сохранении файла", fg="red")
-    # ==============================================================================================
-
     def play_selected(self, event=None):
         """Воспроизведение выбранных треков в foobar2000"""
         selected_items = self.tree.selection()
@@ -223,31 +190,42 @@ class MusicCollectionApp:
                 self._collect_files_from_folder(child, paths, names)
 
     def _play_in_foobar(self, file_paths, display_name):
+        """Запуск воспроизведения в foobar2000"""
         try:
-            self.foobar.play_files(file_paths)
+            subprocess.Popen([self.foobar_path, "/play"] + file_paths)
             self.status_bar.config(text=f"Воспроизведение: {display_name[:50]}...", fg="blue")
         except Exception as e:
-            messagebox.showerror("Ошибка", str(e))
+            messagebox.showerror("Ошибка", f"Не удалось запустить foobar2000:\n{str(e)}")
 
     def add_to_playlist(self):
+        """Добавление выбранных треков в плейлист foobar2000"""
         selected_items = self.tree.selection()
         if not selected_items:
             return
 
-        paths = self._get_selected_paths(selected_items)
+        paths = []
+        for item in selected_items:
+            item_data = self.tree.item(item)
+            if item_data["values"][0] == "file":
+                paths.append(item_data["values"][1])
+            elif item_data["values"][0] == "folder":
+                self._collect_files_from_folder(item, paths, [])
+
         if paths:
             try:
-                self.foobar.add_to_playlist(paths)
+                subprocess.Popen([self.foobar_path, "/add"] + paths)
                 self.status_bar.config(text=f"Добавлено {len(paths)} треков в плейлист", fg="green")
             except Exception as e:
-                messagebox.showerror("Ошибка", str(e))
+                messagebox.showerror("Ошибка", f"Не удалось добавить в плейлист:\n{str(e)}")
 
     def stop_foobar(self):
+        """Остановка воспроизведения в foobar2000"""
         try:
-            self.foobar.stop_playback()
+            subprocess.Popen([self.foobar_path, "/stop"])
             self.status_bar.config(text="Воспроизведение остановлено", fg="black")
         except Exception as e:
-            messagebox.showerror("Ошибка", str(e))
+            messagebox.showerror("Ошибка", f"Не удалось остановить foobar2000:\n{str(e)}")
+
     def open_in_explorer(self):
         """Открытие папки с выбранным файлом в проводнике"""
         selected = self.tree.focus()
@@ -346,52 +324,6 @@ class MusicCollectionApp:
         if item:
             self.tree.selection_set(item)
             self.context_menu.post(event.x_root, event.y_root)
-
-# ===============================================================
-# 28.05.25 функция для сохранения структуры музыкальной коллекции в файл .docx с библиотекой python-docx
-def save_to_docx(music_library, output_path="music_collection.docx"):
-    """
-    Сохраняет структуру музыкальной коллекции в файл .docx
-    :param music_library: Словарь с музыкальной коллекцией
-    :param output_path: Путь для сохранения файла
-    """
-    try:
-        # Создаем новый документ
-        doc = Document()
-
-        # Настройка стилей
-        style = doc.styles['Normal']
-        style.font.name = 'Arial'
-        style.font.size = Pt(12)
-
-        # Добавляем заголовок
-        title = doc.add_heading('Моя музыкальная коллекция', level=1)
-        title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-
-        # Рекурсивно добавляем содержимое
-        def add_items(node, level=1):
-            for name, content in node.items():
-                if name == "_files":
-                    for file_name, _ in content:
-                        p = doc.add_paragraph('    ' * level + f"🎵 {file_name}")
-                        p.runs[0].font.color.rgb = RGBColor(0, 0, 0)  # Черный цвет
-                else:
-                    heading = doc.add_heading('    ' * (level - 1) + f"📁 {name}", level=min(level + 1, 6))
-                    heading.runs[0].font.color.rgb = RGBColor(0, 0, 0)
-                    add_items(content, level + 1)
-
-        add_items(music_library)
-
-        # Сохраняем документ
-        doc.save(output_path)
-        return True
-
-    except Exception as e:
-        print(f"Ошибка при сохранении: {str(e)}")
-        return False
-
-# =================================================================
-
 
 
 if __name__ == "__main__":

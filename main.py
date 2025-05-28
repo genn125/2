@@ -1,25 +1,18 @@
+import tkinter as tk
 
-from file_manager import FileManager
-from foobar_controller import FoobarController
-from collection_tree import CollectionTree
-from config import Config
-from logger import AppLogger
+from music_library import MusicLibrary
+from ui import MusicCollectionUI
+from player_controller import PlayerController
 
 
 class MusicCollectionApp:
     def __init__(self, root):
-        self.config = Config().load()
-        self.logger = AppLogger()
-        self.file_manager = FileManager(('.mp3', '.wav'))
-        self.foobar = FoobarController(self.config['foobar_path'])
+        self.root = root
+        self.library = MusicLibrary()
+        self.player = PlayerController()
+        self.ui = MusicCollectionUI(root, self.library, self.player)
 
-        # Инициализация интерфейса
-        self.tree = CollectionTree(root)
-        self._setup_ui()
-
-    def scan_folder(self):
-        folder = filedialog.askdirectory()
-        if folder:
-            self.music_library = self.file_manager.scan_folder(folder)
-            self.tree.update_tree(self.music_library)
-            self.logger.log(f"Отсканирована папка: {folder}")
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MusicCollectionApp(root)
+    root.mainloop()
