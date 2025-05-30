@@ -25,14 +25,19 @@ class MusicCollectionUI:
         toolbar.pack(fill=tk.X)
 
         # Кнопки (удалены кнопки поиска)
-        buttons = [
-            ("📁 Сканировать папку", self._scan_folder),
-            ("💾 Сохранить", self._save_collection)
-        ]
+        buttons = [ ("📁 Сканировать папку", self._scan_folder)
+                    ]
+        btn_export = tk.Button(toolbar,
+                               text="💾 Сохранить в DOCX",
+                               command=self._save_collection,
+                               bd=1,
+                               relief=tk.RAISED,
+                               padx=10)
+        btn_export.pack(side=tk.RIGHT, padx=22)
 
         for text, cmd in buttons:
             btn = tk.Button(toolbar, text=text, command=cmd, bd=1, relief=tk.RIDGE, padx=10)
-            btn.pack(side=tk.LEFT, padx=10)
+            btn.pack(side=tk.LEFT, padx=10)# Левые кнопки слева, между ними 10
 
         # # Treeview версию с колонками
         tree_frame = tk.Frame(self.root)
@@ -49,14 +54,14 @@ class MusicCollectionUI:
 # Настраиваем колонки, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - верх, s - низ
         self.tree.heading("name", text="Название", anchor=tk.CENTER)
         self.tree.heading("path", text="Путь")
-        self.tree.heading("size", text="Размер")
+        self.tree.heading("size", text="Размер", anchor=tk.W)
         self.tree.heading("date", text="Дата изменения", anchor=tk.W)
 
 # Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
         self.tree.column("name", width=200, stretch=tk.YES)
-        self.tree.column("path", width=300, stretch=tk.YES)
-        self.tree.column("size", width=100, stretch=tk.YES)
-        self.tree.column("date", width=150, stretch=tk.YES)
+        self.tree.column("path", width=500, stretch=tk.YES)
+        self.tree.column("size", width=30, stretch=tk.YES)
+        self.tree.column("date", width=70, stretch=tk.YES)
 
         # Разрешаем изменение размера колонок
         for col in ("name", "path", "size", "date"):
@@ -170,7 +175,7 @@ class MusicCollectionUI:
                 for file_name, file_path in content:
                     # Получаем информацию о файле
                     file_stats = os.stat(file_path)
-                    size = f"{file_stats.st_size / 1024:.1f} KB"
+                    size = f"{file_stats.st_size / 1048576:.1f}   MB"
                     date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
 
                     self.tree.insert(
