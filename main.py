@@ -1,5 +1,4 @@
 import tkinter as tk
-
 from music_library import MusicLibrary
 from ui import MusicCollectionUI
 from player_controller import PlayerController
