@@ -4,9 +4,6 @@ from tkinter import filedialog
 from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
 
 
 class MusicLibrary:
@@ -15,11 +12,17 @@ class MusicLibrary:
         self.music_library = defaultdict(lambda: defaultdict(dict))
 
     def scan_folder(self, folder_path, clear_existing=True):
+        """
+        Сканирует папку и добавляет музыку в коллекцию
+        :param folder_path: Путь к сканируемой папке
+        :param clear_existing: Если True, очищает существующую коллекцию перед сканированием
+        :return: True если успешно, False если отменено
+        """
         if not folder_path:
             return False
 
-        if clear_existing:
-            self.clear_library()
+        self.music_library.clear()
+        self.music_library = defaultdict(lambda: defaultdict(dict))  # Восстанавливаем структуру
 
         self._scan_folder_recursive(folder_path, self.music_library)
         return True
@@ -27,6 +30,7 @@ class MusicLibrary:
     def _scan_folder_recursive(self, current_path, node):
         for entry in os.listdir(current_path):
             full_path = os.path.join(current_path, entry)
+
             if os.path.isdir(full_path):
                 if entry not in node:
                     node[entry] = {}
@@ -40,7 +44,9 @@ class MusicLibrary:
         return self.music_library
 
     def clear_library(self):
+        """Полностью очищает музыкальную коллекцию"""
         self.music_library.clear()
+        # Восстанавливаем структуру defaultdict
         self.music_library = defaultdict(lambda: defaultdict(dict))
 
     def save_to_docx(self, output_path=None):
@@ -55,50 +61,27 @@ class MusicLibrary:
 
         try:
             doc = Document()
-            self._setup_document_styles(doc)
+            style = doc.styles['Normal']
+            style.font.name = 'Arial'
+            style.font.size = Pt(12)
 
-            # Заголовок
             title = doc.add_heading('Моя музыкальная коллекция', level=1)
             title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-            # Основное содержимое
-            for folder_name, content in sorted(self.music_library.items()):
-                self._add_folder(doc, folder_name, content)
+            def add_items(node, level=1):
+                for name, content in node.items():
+                    if name == "_files":
+                        for file_name, _ in content:
+                            p = doc.add_paragraph('    ' * level + f"🎵 {file_name}")
+                            p.runs[0].font.color.rgb = RGBColor(0, 0, 0)
+                    else:
+                        heading = doc.add_heading('    ' * (level - 1) + f"📁 {name}", level=min(level + 1, 6))
+                        heading.runs[0].font.color.rgb = RGBColor(0, 0, 128)
+                        add_items(content, level + 1)
 
+            add_items(self.music_library)
             doc.save(output_path)
             return True, output_path
 
         except Exception as e:
             return False, str(e)
-
-    def _setup_document_styles(self, doc):
-        """Настраивает стили документа"""
-        styles = doc.styles
-        style = styles['Normal']
-        style.font.name = 'Arial'
-        style.font.size = Pt(12)
-
-        if 'FolderHeading' not in styles:
-            heading_style = styles.add_style('FolderHeading', WD_STYLE_TYPE.PARAGRAPH)
-            heading_style.base_style = styles['Heading 2']
-            heading_style.font.color.rgb = RGBColor(0, 0, 128)
-            heading_style.font.bold = True
-
-    def _add_folder(self, doc, folder_name, content, level=1):
-        """Добавляет папку со сворачиваемым содержимым"""
-        # Заголовок папки
-        para = doc.add_paragraph(style='Heading 2')
-        run = para.add_run(f"📁 {folder_name}")
-        run.font.color.rgb = RGBColor(0, 0, 128)
-        run.font.bold = True
-
-        # Добавляем файлы
-        if "_files" in content:
-            for file_name, _ in sorted(content["_files"], key=lambda x: x[0]):
-                file_para = doc.add_paragraph(f"    🎵 {file_name}", style='List Bullet')
-                file_para.paragraph_format.left_indent = Pt(level * 20)
-
-        # Рекурсивно добавляем подпапки
-        for subfolder_name, subcontent in sorted(content.items()):
-            if subfolder_name != "_files":
-                self._add_folder(doc, subfolder_name, subcontent, level + 1)
