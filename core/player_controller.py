@@ -10,10 +10,8 @@ class PlayerController:
         selected_items = tree.selection()
         if not selected_items:
             return
-
         paths = []
         names = []
-
         for item in selected_items:
             item_data = tree.item(item)
             if item_data["values"][0] == "file":
@@ -21,7 +19,6 @@ class PlayerController:
                 names.append(item_data["text"])
             elif item_data["values"][0] == "folder":
                 self._collect_files_from_folder(tree, item, paths, names)
-
         if paths:
             self._play_in_foobar(paths, " | ".join(names))
 
@@ -46,7 +43,6 @@ class PlayerController:
         selected_items = tree.selection()
         if not selected_items:
             return
-
         paths = []
         for item in selected_items:
             item_data = tree.item(item)
@@ -54,7 +50,6 @@ class PlayerController:
                 paths.append(item_data["values"][1])
             elif item_data["values"][0] == "folder":
                 self._collect_files_from_folder(tree, item, paths, [])
-
         if paths:
             try:
                 subprocess.Popen([self.foobar_path, "/add"] + paths)

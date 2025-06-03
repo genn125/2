@@ -14,36 +14,26 @@ class MusicCollectionUI:
     def _setup_ui(self):
         self.root.title("Твоя Музыка")
         self.root.geometry("1000x700")
-
 # Заголовок
         header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
         header_frame.pack(fill=tk.X)
         tk.Label(header_frame, text="ТВОЯ МУЗЫКА",
                  font=('Arial', 14, 'bold'), bg="#f0f0f0").pack(side=tk.LEFT)
-
 # Toolbar с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
         toolbar.pack(fill=tk.X)
-
 # Кнопка сканирования слева
-        scan_btn = tk.Button(toolbar, text="📁 Сканировать папку",
-                             command=self._scan_folder, bd=1, relief=tk.RIDGE, padx=10)
+        scan_btn = tk.Button(toolbar, text="📁 Сканировать папку",command=self._scan_folder, bd=1, relief=tk.RIDGE, padx=10)
         scan_btn.pack(side=tk.LEFT, padx=5)
-
 # Кнопки справа
         right_frame = tk.Frame(toolbar)
         right_frame.pack(side=tk.RIGHT)
-
 # Кнопка выбора форматов
-        formats_btn = tk.Button(right_frame, text="⚙️ Выбрать форматы",
-                                command=self._select_formats, bd=1, relief=tk.RAISED, padx=10)
+        formats_btn = tk.Button(right_frame, text="⚙️ Выбрать форматы",command=self._select_formats, bd=1, relief=tk.RAISED, padx=10)
         formats_btn.pack(side=tk.LEFT, padx=5)
-
 # Кнопка сохранения
-        save_btn = tk.Button(right_frame, text="💾 Сохранить в DOCX",
-                             command=self._save_collection, bd=1, relief=tk.RAISED, padx=10)
+        save_btn = tk.Button(right_frame, text="💾 Сохранить в DOCX",command=self._save_collection, bd=1, relief=tk.RAISED, padx=10)
         save_btn.pack(side=tk.LEFT, padx=5)
-
 # Treeview
         tree_frame = tk.Frame(self.root)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
@@ -56,7 +46,6 @@ class MusicCollectionUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(fill=tk.BOTH, expand=True)
-
 # Настраиваем колонки, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - верх, s - низ
         self.tree.heading("name", text="Название", anchor=tk.CENTER)
         self.tree.heading("path", text="Путь")
@@ -69,26 +58,21 @@ class MusicCollectionUI:
         self.tree.column("size", width=60, stretch=tk.YES)
         self.tree.column("date", width=100, stretch=tk.YES)
         self.tree.column("new", width=40, stretch=tk.YES)
-
 # Управление плеером
         player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
         player_frame.pack(fill=tk.X)
-
 # Кнопки плеера
         player_buttons = [
             ("▶ Воспроизвести", lambda: self.player.play_selected(self.tree)),
             ("⏏ В плейлист", lambda: self.player.add_to_playlist(self.tree)),
             ("⏹ Стоп", self.player.stop_foobar)
         ]
-
         for text, cmd in player_buttons:
             btn = tk.Button(player_frame, text=text, command=cmd, bg="#f8f8f8", padx=10)
             btn.pack(side=tk.LEFT, padx=5)
-
 # Строка состояния
         self.status_bar = tk.Label(player_frame, text="Готов к работе", bg="#e0e0e0", fg="#333333", anchor=tk.W)
         self.status_bar.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
-
 # Контекстное меню
         self.context_menu = Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="Воспроизвести", command=lambda: self.player.play_selected(self.tree))
@@ -96,7 +80,6 @@ class MusicCollectionUI:
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Открыть в проводнике", command=self._open_in_explorer)
         self.context_menu.add_command(label="Удалить", command=self._delete_item)
-
 # Привязки
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
@@ -119,7 +102,7 @@ class MusicCollectionUI:
     def _scan_folder(self):
         folder_path = filedialog.askdirectory(title="Выберите папку с музыкой")
         if folder_path:
-            # Передаем self.root как parent для окна выбора форматов
+# Передаем self.root как parent для окна выбора форматов
             success, message = self.library.scan_folder(folder_path, parent=self.root)
             if success:
                 self.update_tree_view(self.library.get_library())
@@ -147,7 +130,6 @@ class MusicCollectionUI:
             path = os.path.dirname(item_data["values"][2])
         else:
             path = self._find_folder_path(selected)
-
         if path and os.path.exists(path):
             os.startfile(path)
 
@@ -155,11 +137,7 @@ class MusicCollectionUI:
         selected_items = self.tree.selection()
         if not selected_items:
             return
-
-        confirm = messagebox.askyesno(
-            "Подтверждение",
-            f"Удалить {len(selected_items)} выбранных элементов?"
-        )
+        confirm = messagebox.askyesno("Подтверждение",f"Удалить {len(selected_items)} выбранных элементов?")
         if confirm:
             for item in selected_items:
                 self._delete_item_recursive(item)
@@ -167,11 +145,11 @@ class MusicCollectionUI:
             self.update_status(f"Удалено {len(selected_items)} элементов", "orange")
 
     def _delete_item_recursive(self, item):
-        # Заглушка для реализации удаления
+# Заглушка для реализации удаления
         pass
 
     def _find_folder_path(self, folder_item):
-        # Поиск пути к папке
+# Поиск пути к папке
         item_data = self.tree.item(folder_item)
         if item_data["values"][0] == "file":
             return os.path.dirname(item_data["values"][2])
@@ -189,7 +167,6 @@ class MusicCollectionUI:
                         file_stats = os.stat(file_path)
                         size = f"{file_stats.st_size / 1048576:.1f} MB"
                         date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
-
                         tags = ("new_file",) if is_new else ("file",)
                         self.tree.insert(
                             parent_id, "end",

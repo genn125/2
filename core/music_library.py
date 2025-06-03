@@ -7,20 +7,22 @@ from tkinter import filedialog, ttk
 from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-
+import threading
 
 class MusicLibrary:
     def __init__(self):
         self.config_file = "config.json"
         self.all_formats = {
             'Аудио': ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac', '.wma'],
-            'Изображения': ['.jpg', '.jpeg', '.png', '.gif', 'bmp'],
+            'Изображения': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.raw', '.ico', '.tiff'],
             'Видео': ['.mp4', '.mpg', '.avi', '.mkv', '.flv', '.3gp', '.mov'],
             'Документы': ['.txt', 'pdf', '.rtf', '.docx', '.doc', '.xlsx', '.xls']
         }
         self.supported_formats = []
         self.music_library = defaultdict(lambda: defaultdict(dict))
         self.previous_files = set()
+        self.scanning = False
+        self.cancel_scan = False
         self.load_config()
         self.save_config()
 
@@ -40,7 +42,7 @@ class MusicLibrary:
         """Окно выбора форматов с прогресс-баром"""
         selection_window = tk.Toplevel(parent)
         selection_window.title("Выберите форматы файлов")
-        selection_window.geometry("600x500")
+        selection_window.geometry("200x550")
         main_frame = tk.Frame(selection_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         canvas = tk.Canvas(main_frame)
@@ -82,52 +84,69 @@ class MusicLibrary:
         selection_window.wait_window()
         return len(self.supported_formats) > 0
 
-    def scan_folder(self, folder_path, clear_existing=True, parent=None):
+    def scan_folder(self, folder_path, clear_existing=True, parent=None, progress_callback=None):
+
         """Оптимизированное сканирование с прогресс-баром"""
         if not folder_path:
             return False, "Не выбрана папка"
+
+
+
+
 # Окно прогресса
-        progress = tk.Toplevel(parent)
-        progress.title("Сканирование...")
-        progress.geometry("300x100")
-        tk.Label(progress, text="Идет сканирование...").pack(pady=10)
+        progress = tk.Toplevel(parent) # Toplevel — это окно верхнего уровня, появляется поверх основного (parent).
+        progress.title("Сканирование...") #  заголовок окна
+        progress.geometry("500x80")
+#  Добавление текстовой метки
+        tk.Label(progress, text=f"Идет сканирование {folder_path}").pack(pady=10) #  метка с отступом сверху и снизу (10)
+        '''
+            ttk.Progressbar — прогресс-бар из модуля ttk (более современный, чем tkinter.Progressbar).
+            mode="indeterminate" — анимированная полоса, которая движется бесконечно
+            (подходит для процессов без известного времени выполнения).
+        '''
         progress_bar = ttk.Progressbar(progress, mode="indeterminate")
-        progress_bar.pack(pady=5)
+        progress_bar.pack(pady=10)
         progress_bar.start()
+        '''
+            update() принудительно обновляет окно, чтобы оно отобразилось сразу, а не ждало завершения цикла tkinter.
+            Без этого окно может "зависнуть" до окончания сканирования.
+        '''
         progress.update()
         try:
-            if clear_existing:
+            if clear_existing: # флаг, указывающий, нужно ли очистить текущую библиотеку перед сканированием.
                 self.music_library.clear()
-                self.music_library = defaultdict(lambda: defaultdict(dict))
-            file_count = defaultdict(int)
-            current_files = set()
+                self.music_library = defaultdict(lambda: defaultdict(dict)) # создаёт вложенную структуру словарей
+                # для хранения данных:
+            file_count = defaultdict(int) # Счётчик файлов по расширениям (например: {".mp3": 50})
+            current_files = set() # Множество хешей уже обработанных файлов (для проверки новых)
 
             def scan_recursive(current_path, node):
                 nonlocal file_count
-                has_valid_files = False
+                has_valid_files = False # флаг, указывающий, что в папке есть (нет) поддерживаемые файлы.
                 try:
-                    entries = os.listdir(current_path)
-                    progress.update()  # Обновляем окно
+                    entries = os.listdir(current_path) # получает список файлов и папок в current_path.
+                    progress.update()  # обновляет окно прогресса при каждом заходе в новую папку
                 except (PermissionError, OSError):
                     return False
-                for entry in entries:
+                for entry in entries: # Если entry — папка, функция вызывает саму себя для её сканирования.
                     try:
                         full_path = os.path.join(current_path, entry)
                         if os.path.isdir(full_path):
                             subnode = {}
                             if scan_recursive(full_path, subnode):
                                 node[entry] = subnode
-                                has_valid_files = True
-                        elif any(entry.lower().endswith(fmt) for fmt in self.supported_formats):
-                            file_hash = self.get_file_hash(full_path)
+                                has_valid_files = True # флаг, указывающий, что в папке есть поддерживаемые файлы.
+                        elif any(entry.lower().endswith(fmt) for fmt in self.supported_formats):#список поддерживаемых форматов
+                            file_hash = self.get_file_hash(full_path)# вычисляет хеш (например, md5) для отслеживания
+                            # изменений
                             if "_files" not in node:
                                 node["_files"] = []
                             is_new = file_hash not in self.previous_files if file_hash else True
-                            node["_files"].append((entry, full_path, is_new))
+                            node["_files"].append((entry, full_path, is_new))# сохраняет имя, путь и флаг "новый файл"
                             ext = os.path.splitext(entry)[1].lower()
-                            file_count[ext] += 1
+                            file_count[ext] += 1 # увеличивает счётчик для данного расширения
                             if file_hash:
-                                current_files.add(file_hash)
+                                current_files.add(file_hash) # добавляет хеш в множество обработанных файлов.
                             has_valid_files = True
                     except (PermissionError, OSError):
                         continue
