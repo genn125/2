@@ -1,7 +1,7 @@
 import tkinter as tk
-from music_library import MusicLibrary
-from ui import MusicCollectionUI
-from player_controller import PlayerController
+from core.music_library import MusicLibrary
+from core.ui import MusicCollectionUI
+from core.player_controller import PlayerController
 
 
 class MusicCollectionApp:

@@ -3,6 +3,7 @@ from tkinter import ttk, Menu, messagebox, filedialog
 import os
 from datetime import datetime
 
+
 class MusicCollectionUI:
     def __init__(self, root, library, player):
         self.root = root
@@ -14,38 +15,43 @@ class MusicCollectionUI:
         self.root.title("Твоя Музыка")
         self.root.geometry("1000x700")
 
-        # Header
+# Заголовок
         header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
         header_frame.pack(fill=tk.X)
         tk.Label(header_frame, text="ТВОЯ МУЗЫКА",
-                font=('Arial', 14, 'bold'), bg="#f0f0f0").pack(side=tk.LEFT)
+                 font=('Arial', 14, 'bold'), bg="#f0f0f0").pack(side=tk.LEFT)
 
-        # Toolbar with buttons
+# Toolbar с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
         toolbar.pack(fill=tk.X)
 
-        # Кнопки (удалены кнопки поиска)
-        buttons = [ ("📁 Сканировать папку", self._scan_folder)
-                    ]
-        btn_export = tk.Button(toolbar,
-                               text="💾 Сохранить в DOCX",
-                               command=self._save_collection,
-                               bd=1,
-                               relief=tk.RAISED,
-                               padx=10)
-        btn_export.pack(side=tk.RIGHT, padx=22)
+# Кнопка сканирования слева
+        scan_btn = tk.Button(toolbar, text="📁 Сканировать папку",
+                             command=self._scan_folder, bd=1, relief=tk.RIDGE, padx=10)
+        scan_btn.pack(side=tk.LEFT, padx=5)
 
-        for text, cmd in buttons:
-            btn = tk.Button(toolbar, text=text, command=cmd, bd=1, relief=tk.RIDGE, padx=10)
-            btn.pack(side=tk.LEFT, padx=10)# Левые кнопки слева, между ними 10
+# Кнопки справа
+        right_frame = tk.Frame(toolbar)
+        right_frame.pack(side=tk.RIGHT)
 
-        # # Treeview версию с колонками
+# Кнопка выбора форматов
+        formats_btn = tk.Button(right_frame, text="⚙️ Выбрать форматы",
+                                command=self._select_formats, bd=1, relief=tk.RAISED, padx=10)
+        formats_btn.pack(side=tk.LEFT, padx=5)
+
+# Кнопка сохранения
+        save_btn = tk.Button(right_frame, text="💾 Сохранить в DOCX",
+                             command=self._save_collection, bd=1, relief=tk.RAISED, padx=10)
+        save_btn.pack(side=tk.LEFT, padx=5)
+
+# Treeview
         tree_frame = tk.Frame(self.root)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        self.tree = ttk.Treeview(tree_frame, columns=("name", "path", "size", "date"), show="headings")
-        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))# фон папок
-        self.tree.tag_configure("file", background="white")# фон файлов
-
+        self.tree = ttk.Treeview(tree_frame, columns=("name", "path", "size", "date", "new"), show="headings")
+        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold')) # фон папок
+        self.tree.tag_configure("file", background="white") # фон файлов
+        self.tree.tag_configure("new_file", background="#e6f7ff") # новые файлы
+# Скролл бар
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -56,22 +62,19 @@ class MusicCollectionUI:
         self.tree.heading("path", text="Путь")
         self.tree.heading("size", text="Размер", anchor=tk.W)
         self.tree.heading("date", text="Дата изменения", anchor=tk.W)
-
+        self.tree.heading("new", text="Статус", anchor=tk.W)
 # Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
-        self.tree.column("name", width=200, stretch=tk.YES)
+        self.tree.column("name", width=220, stretch=tk.YES)
         self.tree.column("path", width=500, stretch=tk.YES)
-        self.tree.column("size", width=30, stretch=tk.YES)
-        self.tree.column("date", width=70, stretch=tk.YES)
+        self.tree.column("size", width=60, stretch=tk.YES)
+        self.tree.column("date", width=100, stretch=tk.YES)
+        self.tree.column("new", width=40, stretch=tk.YES)
 
-        # Разрешаем изменение размера колонок
-        for col in ("name", "path", "size", "date"):
-            self.tree.heading(col, command=lambda _col=col: self._treeview_sort_column(_col, False))
-
-        # Player controls frame
+# Управление плеером
         player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
         player_frame.pack(fill=tk.X)
 
-        # Player buttons
+# Кнопки плеера
         player_buttons = [
             ("▶ Воспроизвести", lambda: self.player.play_selected(self.tree)),
             ("⏏ В плейлист", lambda: self.player.add_to_playlist(self.tree)),
@@ -82,43 +85,49 @@ class MusicCollectionUI:
             btn = tk.Button(player_frame, text=text, command=cmd, bg="#f8f8f8", padx=10)
             btn.pack(side=tk.LEFT, padx=5)
 
-        # Status bar
-        self.status_bar = tk.Label(player_frame, text="Готов к работе",
-                                 bg="#e0e0e0", fg="#333333", anchor=tk.W)
+# Строка состояния
+        self.status_bar = tk.Label(player_frame, text="Готов к работе", bg="#e0e0e0", fg="#333333", anchor=tk.W)
         self.status_bar.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
 
-        # Context menu
+# Контекстное меню
         self.context_menu = Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="Воспроизвести", command=lambda: self.player.play_selected(self.tree))
-        self.context_menu.add_command(label="Добавить в плейлист", command=lambda: self.player.add_to_playlist(self.tree))
+        self.context_menu.add_command(label="Добавить в плейлист",command=lambda: self.player.add_to_playlist(self.tree))
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Открыть в проводнике", command=self._open_in_explorer)
         self.context_menu.add_command(label="Удалить", command=self._delete_item)
 
-        # Bindings
+# Привязки
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
 
+    def _select_formats(self):
+        """Открывает окно выбора форматов"""
+        self.library.show_format_selection(self.root)
+
     def _treeview_sort_column(self, col, reverse):
-        # Получаем все элементы
+# Получаем все элементы
         items = [(self.tree.set(k, col), k) for k in self.tree.get_children("")]
-
-        # Сортируем элементы
+# Сортируем элементы
         items.sort(reverse=reverse)
-
-        # Перемещаем элементы в отсортированном порядке
+# Перемещаем элементы в отсортированном порядке
         for index, (val, k) in enumerate(items):
             self.tree.move(k, "", index)
-
-        # Устанавливаем обратную сортировку для следующего клика
+# Устанавливаем обратную сортировку для следующего клика
         self.tree.heading(col, command=lambda: self._treeview_sort_column(col, not reverse))
 
     def _scan_folder(self):
         folder_path = filedialog.askdirectory(title="Выберите папку с музыкой")
         if folder_path:
-            if self.library.scan_folder(folder_path):
+            # Передаем self.root как parent для окна выбора форматов
+            success, message = self.library.scan_folder(folder_path, parent=self.root)
+            if success:
                 self.update_tree_view(self.library.get_library())
-                self.update_status(f"Добавлено: {folder_path}", "green")
+                self.update_status(message, "green")
+            else:
+                self.update_status(message, "red")
+                if "Не выбрано ни одного формата" not in message:  # Не показываем для отмены выбора
+                    messagebox.showwarning("Внимание", message)
 
     def _save_collection(self):
         success, result = self.library.save_to_docx()
@@ -135,7 +144,7 @@ class MusicCollectionUI:
 
         item_data = self.tree.item(selected)
         if item_data["values"][0] == "file":
-            path = os.path.dirname(item_data["values"][1])
+            path = os.path.dirname(item_data["values"][2])
         else:
             path = self._find_folder_path(selected)
 
@@ -158,12 +167,14 @@ class MusicCollectionUI:
             self.update_status(f"Удалено {len(selected_items)} элементов", "orange")
 
     def _delete_item_recursive(self, item):
-        # Реализация удаления из дерева
+        # Заглушка для реализации удаления
         pass
 
     def _find_folder_path(self, folder_item):
-        # Реализация поиска пути к папке
-        pass
+        # Поиск пути к папке
+        item_data = self.tree.item(folder_item)
+        if item_data["values"][0] == "file":
+            return os.path.dirname(item_data["values"][2])
 
     def update_tree_view(self, library):
         self.tree.delete(*self.tree.get_children())
@@ -172,17 +183,22 @@ class MusicCollectionUI:
     def _build_tree_recursive(self, parent_id, node):
         for name, content in node.items():
             if name == "_files":
-                for file_name, file_path in content:
-                    # Получаем информацию о файле
-                    file_stats = os.stat(file_path)
-                    size = f"{file_stats.st_size / 1048576:.1f}   MB"
-                    date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
+                for file_name, file_path, is_new in content:
+                    try:
+                        # Получаем информацию о файле
+                        file_stats = os.stat(file_path)
+                        size = f"{file_stats.st_size / 1048576:.1f} MB"
+                        date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
 
-                    self.tree.insert(
-                        parent_id, "end",
-                        values=(file_name, file_path, size, date),
-                        tags=("file",)
-                    )
+                        tags = ("new_file",) if is_new else ("file",)
+                        self.tree.insert(
+                            parent_id, "end",
+                            text=file_name,  # Отображается в колонке "Название
+                            values=(file_name, file_path, size, date, "NEW" if is_new else ""),
+                            tags=tags
+                        )
+                    except (OSError, PermissionError):
+                        continue
             else:
                 folder_id = self.tree.insert(
                     parent_id, "end",
@@ -200,3 +216,6 @@ class MusicCollectionUI:
 
     def update_status(self, text, color="black"):
         self.status_bar.config(text=text, fg=color)
+
+
+
