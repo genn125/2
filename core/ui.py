@@ -193,6 +193,3 @@ class MusicCollectionUI:
 
     def update_status(self, text, color="black"):
         self.status_bar.config(text=text, fg=color)
-
-
-

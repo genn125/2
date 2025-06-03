@@ -1,13 +1,34 @@
-import os
-import json
 import hashlib
-from collections import defaultdict
+import json
+import os
 import tkinter as tk
+from collections import defaultdict
 from tkinter import filedialog, ttk
+
 from docx import Document
-from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-import threading
+from docx.shared import Pt, RGBColor
+
+
+def get_file_hash(filepath):
+    if not os.path.isfile(filepath):
+        return None
+    try:
+        hasher = hashlib.md5()
+        with open(filepath, 'rb') as f:
+            buf = f.read(65536)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = f.read(65536)
+        return hasher.hexdigest()
+    except (PermissionError, OSError):
+        return None
+
+
+def toggle_all(state, format_vars):
+    for fmt, var in format_vars.items():
+        var.set(1 if state else 0)
+
 
 class MusicLibrary:
     def __init__(self):
@@ -56,8 +77,8 @@ class MusicLibrary:
 # Кнопки управления выбором
         select_all_frame = tk.Frame(scrollable_frame)
         select_all_frame.pack(fill=tk.X, pady=5)
-        tk.Button(select_all_frame, text="Выбрать все",command=lambda: self.toggle_all(True, format_vars)).pack(side=tk.LEFT)
-        tk.Button(select_all_frame, text="Снять все",command=lambda: self.toggle_all(False, format_vars)).pack(side=tk.LEFT)
+        tk.Button(select_all_frame, text="Выбрать все",command=lambda: toggle_all(True, format_vars)).pack(side=tk.LEFT)
+        tk.Button(select_all_frame, text="Снять все",command=lambda: toggle_all(False, format_vars)).pack(side=tk.LEFT)
         format_vars = {}
 # Группы форматов
         for group_name, formats in self.all_formats.items():
@@ -84,21 +105,17 @@ class MusicLibrary:
         selection_window.wait_window()
         return len(self.supported_formats) > 0
 
-    def scan_folder(self, folder_path, clear_existing=True, parent=None, progress_callback=None):
-
+    def scan_folder(self, folder_path, clear_existing=True, parent=None):
         """Оптимизированное сканирование с прогресс-баром"""
         if not folder_path:
             return False, "Не выбрана папка"
-
-
-
-
 # Окно прогресса
         progress = tk.Toplevel(parent) # Toplevel — это окно верхнего уровня, появляется поверх основного (parent).
-        progress.title("Сканирование...") #  заголовок окна
+        progress.title("Сканирование") #  заголовок окна
         progress.geometry("500x80")
 #  Добавление текстовой метки
-        tk.Label(progress, text=f"Идет сканирование {folder_path}").pack(pady=10) #  метка с отступом сверху и снизу (10)
+        tk.Label(progress, text=f"Идет сканирование папки {folder_path}").pack(pady=10) #  метка с отступом сверху и
+        # снизу (10)
         '''
             ttk.Progressbar — прогресс-бар из модуля ttk (более современный, чем tkinter.Progressbar).
             mode="indeterminate" — анимированная полоса, которая движется бесконечно
@@ -137,7 +154,7 @@ class MusicLibrary:
                                 node[entry] = subnode
                                 has_valid_files = True # флаг, указывающий, что в папке есть поддерживаемые файлы.
                         elif any(entry.lower().endswith(fmt) for fmt in self.supported_formats):#список поддерживаемых форматов
-                            file_hash = self.get_file_hash(full_path)# вычисляет хеш (например, md5) для отслеживания
+                            file_hash = get_file_hash(full_path)# вычисляет хеш (например, md5) для отслеживания
                             # изменений
                             if "_files" not in node:
                                 node["_files"] = []
@@ -159,24 +176,6 @@ class MusicLibrary:
             return True, f"Найдено: {sum(file_count.values())} файлов ({stats})"
         finally:
             progress.destroy()  # Закрываем окно прогресса в любом случае
-
-    def toggle_all(self, state, format_vars):
-        for fmt, var in format_vars.items():
-            var.set(1 if state else 0)
-
-    def get_file_hash(self, filepath):
-        if not os.path.isfile(filepath):
-            return None
-        try:
-            hasher = hashlib.md5()
-            with open(filepath, 'rb') as f:
-                buf = f.read(65536)
-                while len(buf) > 0:
-                    hasher.update(buf)
-                    buf = f.read(65536)
-            return hasher.hexdigest()
-        except (PermissionError, OSError):
-            return None
 
     def get_library(self):
         return self.music_library
