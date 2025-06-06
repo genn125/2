@@ -147,7 +147,7 @@ class MusicLibrary:
                     return False
                 for entry in entries: # Если entry — папка, функция вызывает саму себя для её сканирования.
                     try:
-                        full_path = os.path.join(current_path, entry)
+                        full_path = os.path.abspath(os.path.join(current_path, entry))
                         if os.path.isdir(full_path):
                             subnode = {}
                             if scan_recursive(full_path, subnode):

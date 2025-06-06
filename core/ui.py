@@ -163,28 +163,59 @@ class MusicCollectionUI:
             if name == "_files":
                 for file_name, file_path, is_new in content:
                     try:
+                        # Нормализуем путь (абсолютный + правильные разделители)
+                        abs_path = os.path.abspath(file_path) if file_path else ""
+                        abs_path = abs_path.replace('/', '\\')
+
                         # Получаем информацию о файле
-                        file_stats = os.stat(file_path)
+                        file_stats = os.stat(abs_path)
                         size = f"{file_stats.st_size / 1048576:.1f} MB"
                         date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
+
+                        # Определяем теги для отображения
                         tags = ("new_file",) if is_new else ("file",)
+
+                        # Вставляем данные в treeview
                         self.tree.insert(
-                            parent_id, "end",
-                            text=file_name,  # Отображается в колонке "Название
-                            values=(file_name, file_path, size, date, "NEW" if is_new else ""),
+                            parent_id,
+                            "end",
+                            text=file_name,
+                            values=(
+                                file_name,  # Название
+                                abs_path,  # Абсолютный путь
+                                size,  # Размер
+                                date,  # Дата изменения
+                                "NEW" if is_new else ""  # Статус
+                            ),
                             tags=tags
                         )
-                    except (OSError, PermissionError):
+
+                    except FileNotFoundError:
+                        print(f"Файл не найден: {file_path}")
                         continue
-            else:
+                    except PermissionError:
+                        print(f"Нет доступа к файлу: {file_path}")
+                        continue
+                    except Exception as e:
+                        print(f"Ошибка обработки файла {file_path}: {str(e)}")
+                        continue
+
+            else:  # Обработка папок
                 folder_id = self.tree.insert(
-                    parent_id, "end",
+                    parent_id,
+                    "end",
                     text=name,
-                    values=(name, "", "", ""),
+                    values=(
+                        name,  # Название папки
+                        "",  # Путь (пусто для папок)
+                        "",  # Размер (пусто)
+                        "",  # Дата (пусто)
+                        ""  # Статус (пусто)
+                    ),
                     tags=("folder",)
                 )
                 self._build_tree_recursive(folder_id, content)
-
+                
     def show_context_menu(self, event):
         item = self.tree.identify_row(event.y)
         if item:
