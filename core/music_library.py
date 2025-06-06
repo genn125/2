@@ -2,9 +2,8 @@ import hashlib
 import json
 import os
 import tkinter as tk
-from collections import defaultdict
 from tkinter import filedialog, ttk
-
+from collections import defaultdict
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt, RGBColor

@@ -22,25 +22,43 @@ class PlayerController:
     def _normalize_path(self, raw_path):
         """Приводит путь к абсолютному виду и проверяет его существование."""
         try:
-            # Исправляем косые черты и лишние кавычки
+
+            """ Исправляем косые черты и лишние кавычки
+- raw_path.replace('/', '\\') — заменяем все слэши / на обратные слэши \, чтобы привести путь к привычному для Windows виду.
+- .strip('"') — убираем кавычки " в начале и конце строки, если они есть.
+- .strip() — удаляем пробелы в начале и конце строки."""
+
             path = raw_path.replace('/', '\\').strip('"').strip()
 
-            # Если путь уже абсолютный
+            """ Если путь уже абсолютный
+- Проверяем, является ли путь абсолютным.
+- Если да — проверяем, существует ли файл или папка по этому пути.
+- Если существует — возвращаем путь.
+- Если не существует — возвращаем None."""
+
             if os.path.isabs(path):
                 return path if os.path.exists(path) else None
 
-            # Пробуем найти файл относительно разных базовых путей
+            """ Пробуем найти файл относительно разных базовых путей
+- Создаём список базовых папок, относительно которых попробуем найти файл, если путь относительный:
+- os.path.dirname(os.path.abspath(file)) — папка, где находится текущий скрипт (или модуль).
+- os.path.expanduser('~') — домашняя директория пользователя.
+- D:\ и C:\ — корневые каталоги дисков D и C."""
+
             search_paths = [
                 os.path.dirname(os.path.abspath(__file__)),  # Папка с программой
                 os.path.expanduser('~'),  # Домашняя папка
                 'D:\\', 'C:\\',  # Корни дисков
             ]
+            """- Для каждого базового пути из search_paths:
+- Соединяем базовый путь base с относительным path через os.path.join.
+- Приводим полученный путь к абсолютному с помощью os.path.abspath.
+- Если файл или папка существует по этому пути — возвращаем полный абсолютный путь."""
 
             for base in search_paths:
                 full_path = os.path.abspath(os.path.join(base, path))
                 if os.path.exists(full_path):
                     return full_path
-
             return None
         except Exception as e:
             print(f"Ошибка обработки пути {raw_path}: {str(e)}")
@@ -59,8 +77,9 @@ class PlayerController:
 
         for item in selected_items:
             item_data = tree.item(item)
+
             if item_data["values"][0] == "file":
-                normalized_path = self._normalize_path(item_data["values"][1])
+                normalized_path = self._normalize_path(item_data["values"][2])
                 if normalized_path:
                     paths.append(normalized_path)
                     names.append(item_data["text"])
@@ -89,15 +108,11 @@ class PlayerController:
 
     def _play_in_foobar(self, file_paths, display_name):
         try:
-            # Экранируем пути с пробелами
-            escaped_paths = []
-            for path in file_paths:
-                if ' ' in path and not path.startswith('"'):
-                    escaped_paths.append(f'"{path}"')
-                else:
-                    escaped_paths.append(path)
+            # Просто передаем пути без кавычек
+            cmd = [self.foobar_path, "/play"] + file_paths
 
-            subprocess.Popen([self.foobar_path, "/play"] + escaped_paths)
+            subprocess.Popen(cmd, shell=False)
+
             return True, f"Воспроизведение: {display_name}"
         except Exception as e:
             error_msg = (
@@ -106,6 +121,26 @@ class PlayerController:
             )
             messagebox.showerror("Ошибка", error_msg)
             return False, str(e)
+
+    # def _play_in_foobar(self, file_paths, display_name):
+    #     try:
+    #         # Экранируем пути с пробелами
+    #         escaped_paths = []
+    #         for path in file_paths:
+    #             # if ' ' in path and not path.startswith('"'):
+    #             #     escaped_paths.append(f'"{path}"')
+    #             # else:
+    #             escaped_paths.append(path)
+    #
+    #         subprocess.Popen([self.foobar_path, "/play"] + escaped_paths, shell=False)
+    #         return True, f"Воспроизведение: {display_name}"
+    #     except Exception as e:
+    #         error_msg = (
+    #                 f"Ошибка запуска foobar2000:\n{str(e)}\n\n"
+    #                 f"Проверьте пути:\n" + "\n".join(f"- {p}" for p in file_paths)
+    #         )
+    #         messagebox.showerror("Ошибка", error_msg)
+    #         return False, str(e)
 
     def add_to_playlist(self, tree):
         if not self._verify_foobar_path():
@@ -133,10 +168,10 @@ class PlayerController:
         try:
             escaped_paths = []
             for path in paths:
-                if ' ' in path and not path.startswith('"'):
-                    escaped_paths.append(f'"{path}"')
-                else:
-                    escaped_paths.append(path)
+            #     if ' ' in path and not path.startswith('"'):
+            #         escaped_paths.append(f'"{path}"')
+            #     else:
+                escaped_paths.append(path)
 
             subprocess.Popen([self.foobar_path, "/add"] + escaped_paths)
             return True, f"Добавлено {len(paths)} треков в плейлист"
