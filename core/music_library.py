@@ -62,9 +62,20 @@ class MusicLibrary:
         """Окно выбора форматов с прогресс-баром"""
         selection_window = tk.Toplevel(parent)
         selection_window.title("Выберите форматы файлов")
-        selection_window.geometry("200x550")
+        selection_window.geometry("600x400")
+
         main_frame = tk.Frame(selection_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Создаем контейнер для колонок групп
+        columns_frame = tk.Frame(main_frame)
+        columns_frame.pack(fill=tk.BOTH, expand=True)
+        # Создаем 2 колонки
+        left_column = tk.Frame(columns_frame)
+        left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        right_column = tk.Frame(columns_frame)
+        right_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+
         canvas = tk.Canvas(main_frame)
         scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas)
@@ -73,36 +84,147 @@ class MusicLibrary:
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-# Кнопки управления выбором
+
+        # Кнопки управления выбором
         select_all_frame = tk.Frame(scrollable_frame)
         select_all_frame.pack(fill=tk.X, pady=5)
-        tk.Button(select_all_frame, text="Выбрать все",command=lambda: toggle_all(True, format_vars)).pack(side=tk.LEFT)
-        tk.Button(select_all_frame, text="Снять все",command=lambda: toggle_all(False, format_vars)).pack(side=tk.LEFT)
+        tk.Button(select_all_frame, text="Выбрать все", command=lambda: toggle_all(True, format_vars)).pack(
+            side=tk.LEFT, padx=2)
+        tk.Button(select_all_frame, text="Снять все", command=lambda: toggle_all(False, format_vars)).pack(
+            side=tk.LEFT)
+
         format_vars = {}
-# Группы форматов
-        for group_name, formats in self.all_formats.items():
-            group_frame = tk.LabelFrame(scrollable_frame, text=group_name, padx=5, pady=5)
+
+        # Распределяем группы по колонкам
+        group_frames = []
+        for i, (group_name, formats) in enumerate(self.all_formats.items()):
+            # Выбираем колонку (четные - левая, нечетные - правая)
+            column = left_column if i % 2 == 0 else right_column
+
+            group_frame = tk.LabelFrame(column, text=group_name, padx=5, pady=5)
             group_frame.pack(fill=tk.X, pady=5)
-            cols = [tk.Frame(group_frame) for _ in range(3)]
+            group_frames.append(group_frame)
+
+            # Кнопки управления для группы
+            group_buttons_frame = tk.Frame(group_frame)
+            group_buttons_frame.pack(fill=tk.X, pady=2)
+
+            def create_group_toggle(group_formats, state):
+                return lambda: [format_vars[fmt].set(1 if state else 0) for fmt in group_formats]
+
+            tk.Button(group_buttons_frame, text="✓",
+                      command=create_group_toggle(formats, True),
+                      width=3).pack(side=tk.LEFT, padx=2)
+            tk.Button(group_buttons_frame, text="✕",
+                      command=create_group_toggle(formats, False),
+                      width=3).pack(side=tk.LEFT, padx=2)
+
+            # 2 колонки внутри каждой группы для форматов
+            cols = [tk.Frame(group_frame) for _ in range(2)]
             for col in cols:
                 col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
             for i, fmt in enumerate(formats):
-                col = cols[i % 3]
+                col = cols[i % 2]  # Распределение по 2 колонкам внутри группы
                 format_vars[fmt] = tk.IntVar(value=1 if fmt in self.supported_formats else 0)
                 tk.Checkbutton(col, text=fmt, variable=format_vars[fmt], anchor='w').pack(anchor='w')
-# Кнопки подтверждения
-        button_frame = tk.Frame(selection_window)
-        button_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        # Кнопки подтверждения
+        button_frame = tk.Frame(main_frame)
+        button_frame.pack(fill=tk.NONE, padx=10, pady=10)
 
         def apply_selection():
             self.supported_formats = [fmt for fmt, var in format_vars.items() if var.get()]
             self.save_config()
             selection_window.destroy()
-        tk.Button(button_frame, text="Применить", command=apply_selection, bg="#4CAF50", fg="white").pack(side=tk.RIGHT)
-        tk.Button(button_frame, text="Отмена", command=selection_window.destroy).pack(side=tk.LEFT)
+
+        tk.Button(button_frame, text=" Применить ", command=apply_selection, bg="#4CAF50", fg="white").pack(
+            fill=tk.NONE,side=tk.RIGHT)
+        tk.Button(button_frame, text=" Отмена ", command=selection_window.destroy).pack(side=tk.LEFT, padx=2)
+
         selection_window.grab_set()
         selection_window.wait_window()
         return len(self.supported_formats) > 0
+
+        #     def create_group_toggle(group_formats, state):
+        #         return lambda: [format_vars[fmt].set(1 if state else 0) for fmt in group_formats]
+        #
+        #     tk.Button(group_buttons_frame, text="✓",
+        #               command=create_group_toggle(formats, True),
+        #               width=3).pack(side=tk.LEFT, padx=2)
+        #     tk.Button(group_buttons_frame, text="✕",
+        #               command=create_group_toggle(formats, False),
+        #               width=3).pack(side=tk.LEFT, padx=2)
+        #     # Создание колонок для чекбоксов (3 колонки)
+        #     cols = [tk.Frame(group_frame) for _ in range(3)]
+        #     for col in cols:
+        #         col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        #     # Добавление чекбоксов для каждого формата в группе
+        #     for i, fmt in enumerate(formats):
+        #         col = cols[i % 3]
+        #         format_vars[fmt] = tk.IntVar(value=1 if fmt in self.supported_formats else 0)
+        #         tk.Checkbutton(col, text=fmt, variable=format_vars[fmt], anchor='w').pack(anchor='w')
+        #
+        # # Кнопки подтверждения
+        # button_frame = tk.Frame(selection_window)
+        # button_frame.pack(fill=tk.X, padx=10, pady=10)
+        #
+        # def apply_selection():
+        #     self.supported_formats = [fmt for fmt, var in format_vars.items() if var.get()]
+        #     self.save_config()
+        #     selection_window.destroy()
+        #
+        # tk.Button(button_frame, text="Применить", command=apply_selection, bg="#4CAF50", fg="white").pack(side=tk.RIGHT)
+        # tk.Button(button_frame, text="Отмена", command=selection_window.destroy).pack(side=tk.LEFT)
+        # selection_window.grab_set()
+        # selection_window.wait_window()
+        # return len(self.supported_formats) > 0
+
+#     def show_format_selection(self, parent):
+#         """Окно выбора форматов с прогресс-баром"""
+#         selection_window = tk.Toplevel(parent)
+#         selection_window.title("Выберите форматы файлов")
+#         selection_window.geometry("200x550")
+#         main_frame = tk.Frame(selection_window)
+#         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+#         canvas = tk.Canvas(main_frame)
+#         scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+#         scrollable_frame = tk.Frame(canvas)
+#         scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+#         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+#         canvas.configure(yscrollcommand=scrollbar.set)
+#         canvas.pack(side="left", fill="both", expand=True)
+#         scrollbar.pack(side="right", fill="y")
+# # Кнопки управления выбором
+#         select_all_frame = tk.Frame(scrollable_frame)
+#         select_all_frame.pack(fill=tk.X, pady=5)
+#         tk.Button(select_all_frame, text="Выбрать все",command=lambda: toggle_all(True, format_vars)).pack(side=tk.LEFT)
+#         tk.Button(select_all_frame, text="Снять все",command=lambda: toggle_all(False, format_vars)).pack(side=tk.LEFT)
+#         format_vars = {}
+# # Группы форматов
+#         for group_name, formats in self.all_formats.items():
+#             group_frame = tk.LabelFrame(scrollable_frame, text=group_name, padx=5, pady=5)
+#             group_frame.pack(fill=tk.X, pady=5)
+#             cols = [tk.Frame(group_frame) for _ in range(3)]
+#             for col in cols:
+#                 col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+#             for i, fmt in enumerate(formats):
+#                 col = cols[i % 3]
+#                 format_vars[fmt] = tk.IntVar(value=1 if fmt in self.supported_formats else 0)
+#                 tk.Checkbutton(col, text=fmt, variable=format_vars[fmt], anchor='w').pack(anchor='w')
+# # Кнопки подтверждения
+#         button_frame = tk.Frame(selection_window)
+#         button_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        # def apply_selection():
+        #     self.supported_formats = [fmt for fmt, var in format_vars.items() if var.get()]
+        #     self.save_config()
+        #     selection_window.destroy()
+        # tk.Button(button_frame, text="Применить", command=apply_selection, bg="#4CAF50", fg="white").pack(side=tk.RIGHT)
+        # tk.Button(button_frame, text="Отмена", command=selection_window.destroy).pack(side=tk.LEFT)
+        # selection_window.grab_set()
+        # selection_window.wait_window()
+        # return len(self.supported_formats) > 0
 
     def scan_folder(self, folder_path, clear_existing=True, parent=None):
         """Оптимизированное сканирование с прогресс-баром"""
