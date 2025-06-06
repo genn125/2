@@ -24,7 +24,7 @@ class PlayerController:
         try:
 
             """ Исправляем косые черты и лишние кавычки
-- raw_path.replace('/', '\\') — заменяем все слэши / на обратные слэши \, чтобы привести путь к привычному для Windows виду.
+
 - .strip('"') — убираем кавычки " в начале и конце строки, если они есть.
 - .strip() — удаляем пробелы в начале и конце строки."""
 
@@ -43,7 +43,7 @@ class PlayerController:
 - Создаём список базовых папок, относительно которых попробуем найти файл, если путь относительный:
 - os.path.dirname(os.path.abspath(file)) — папка, где находится текущий скрипт (или модуль).
 - os.path.expanduser('~') — домашняя директория пользователя.
-- D:\ и C:\ — корневые каталоги дисков D и C."""
+"""
 
             search_paths = [
                 os.path.dirname(os.path.abspath(__file__)),  # Папка с программой
@@ -77,17 +77,14 @@ class PlayerController:
 
         for item in selected_items:
             item_data = tree.item(item)
-
             if item_data["values"][0] == "file":
-                normalized_path = self._normalize_path(item_data["values"][2])
+                normalized_path = self._normalize_path(item_data["values"][2])  # Индекс 2 для пути
                 if normalized_path:
                     paths.append(normalized_path)
                     names.append(item_data["text"])
-                else:
-                    print(f"Файл не найден: {item_data['values'][1]}")
             elif item_data["values"][0] == "folder":
                 self._collect_files_from_folder(tree, item, paths, names)
-
+            print(item_data["values"]) ###################################################
         if not paths:
             return False, "Нет доступных файлов для воспроизведения"
 

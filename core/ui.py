@@ -13,7 +13,7 @@ class MusicCollectionUI:
 
     def _setup_ui(self):
         self.root.title("Твоя Музыка")
-        self.root.geometry("1000x700")
+        self.root.geometry("1200x700")
 # Заголовок
         header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
         header_frame.pack(fill=tk.X)
@@ -37,7 +37,7 @@ class MusicCollectionUI:
 # Treeview
         tree_frame = tk.Frame(self.root)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        self.tree = ttk.Treeview(tree_frame, columns=("name", "path", "size", "date", "new"), show="headings")
+        self.tree = ttk.Treeview(tree_frame, columns=("type", "name", "path", "size", "date", "new"), show="headings")
         self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold')) # фон папок
         self.tree.tag_configure("file", background="white") # фон файлов
         self.tree.tag_configure("new_file", background="#e6f7ff") # новые файлы
@@ -47,12 +47,14 @@ class MusicCollectionUI:
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(fill=tk.BOTH, expand=True)
 # Настраиваем колонки, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - верх, s - низ
+        self.tree.heading("type", text="Тип")  # Добавьте эту строку, если хотите отображать тип
         self.tree.heading("name", text="Название", anchor=tk.CENTER)
         self.tree.heading("path", text="Путь")
         self.tree.heading("size", text="Размер", anchor=tk.W)
         self.tree.heading("date", text="Дата изменения", anchor=tk.W)
         self.tree.heading("new", text="Статус", anchor=tk.W)
 # Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
+        self.tree.column("type", width=200, stretch=tk.YES)
         self.tree.column("name", width=220, stretch=tk.YES)
         self.tree.column("path", width=500, stretch=tk.YES)
         self.tree.column("size", width=60, stretch=tk.YES)
@@ -181,6 +183,7 @@ class MusicCollectionUI:
                             "end",
                             text=file_name,
                             values=(
+                                "file",  # Тип элемента (добавлено)
                                 file_name,  # Название
                                 abs_path,  # Абсолютный путь
                                 size,  # Размер
@@ -215,7 +218,7 @@ class MusicCollectionUI:
                     tags=("folder",)
                 )
                 self._build_tree_recursive(folder_id, content)
-                
+
     def show_context_menu(self, event):
         item = self.tree.identify_row(event.y)
         if item:
