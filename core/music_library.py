@@ -61,7 +61,7 @@ class MusicLibrary:
     def show_format_selection(self, parent):
         """Окно выбора форматов с прогресс-баром"""
         selection_window = tk.Toplevel(parent)
-        selection_window.title("Выберите форматы файлов")
+        selection_window.title("Выбор формата файлов")
         selection_window.geometry("600x400")
 
         main_frame = tk.Frame(selection_window)
