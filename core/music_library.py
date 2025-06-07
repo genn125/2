@@ -23,7 +23,6 @@ def get_file_hash(filepath): # вычисляет MD5-хеш файла
     except (PermissionError, OSError):
         return None
 
-
 def toggle_all(state, format_vars):
     for fmt, var in format_vars.items():
         var.set(1 if state else 0)
