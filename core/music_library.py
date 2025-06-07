@@ -33,8 +33,10 @@ class MusicLibrary:
         self.all_formats = {
             'Аудио': ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac', '.wma'],
             'Изображения': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.raw', '.ico', '.tiff'],
-            'Видео': ['.mp4', '.mpg', '.avi', '.mkv', '.flv', '.3gp', '.mov'],
-            'Документы': ['.txt', 'pdf', '.rtf', '.docx', '.doc', '.xlsx', '.xls']
+            'Видео': ['.mp4', '.mpg', '.avi', '.mkv', '.flv', '.3gp', '.mov',' .wmv'],
+            'Документы': ['.txt', 'pdf', '.rtf', '.docx', '.doc', '.xlsx', '.xls'],
+            'Исполняемые': ['.exe', '.msi','.iso','.zip','.rar', '.7z'],
+            'Разные': ['.dll', '.py', '.pyp', '.inf', '.js', '.css']
         }
         self.supported_formats = []
         self.music_library = defaultdict(lambda: defaultdict(dict))
@@ -60,7 +62,7 @@ class MusicLibrary:
         """Окно выбора форматов с прогресс-баром"""
         selection_window = tk.Toplevel(parent)
         selection_window.title("Выбор формата файлов")
-        selection_window.geometry("650x410")
+        selection_window.geometry("600x550")
 
         main_frame = tk.Frame(selection_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -81,6 +83,7 @@ class MusicLibrary:
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
 # Общие настройки стиля кнопок
         main_button_style = {
             'font': ('Arial', 8, 'bold'),
@@ -96,10 +99,10 @@ class MusicLibrary:
         tk.Button(select_all_frame, text="Снять все", **main_button_style,
                   command=lambda: toggle_all(False, format_vars)).pack(side=tk.LEFT)
         format_vars = {}
-        # Распределяем группы по колонкам
+# Распределяем группы по колонкам
         group_frames = []
         for i, (group_name, formats) in enumerate(self.all_formats.items()):
-            # Выбираем колонку (четные - левая, нечетные - правая)
+# Выбираем колонку (четные - левая, нечетные - правая)
             column = left_column if i % 2 == 0 else right_column
 
             group_frame = tk.LabelFrame(column, text=group_name, padx=5, pady=5)
@@ -248,10 +251,10 @@ class MusicLibrary:
                 for name, content in node.items():
                     if name == "_files":
                         for file_name, _, is_new in content:
-                            p = doc.add_paragraph('    ' * level + f"🎵 {file_name}" + (" (NEW)" if is_new else ""))
+                            p = doc.add_paragraph('    ' * level + f" {file_name}" + (" (NEW)" if is_new else ""))
                             p.runs[0].font.color.rgb = RGBColor(0, 0, 0)
                     else:
-                        heading = doc.add_heading('    ' * (level - 1) + f"📁 {name}", level=min(level + 1, 6))
+                        heading = doc.add_heading('    ' * (level - 1) + f" {name}", level=min(level + 1, 6))
                         heading.runs[0].font.color.rgb = RGBColor(0, 0, 128)
                         add_items(content, level + 1)
             add_items(self.music_library)

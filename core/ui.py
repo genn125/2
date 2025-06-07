@@ -12,7 +12,7 @@ class MusicCollectionUI:
         self._setup_ui()
 
     def _setup_ui(self):
-        self.root.title("Твоя Музыка")
+        self.root.title("Твои файлы")
         self.root.geometry("1200x700")
         # Заголовок
         header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
@@ -78,15 +78,19 @@ class MusicCollectionUI:
         # Строка состояния
         self.status_bar = tk.Label(player_frame, text="Готов к работе", bg="#e0e0e0", fg="#333333", anchor=tk.W)
         self.status_bar.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
-        # Контекстное меню
+
+# Контекстное меню
         self.context_menu = Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="Воспроизвести", command=lambda: self.player.play_selected(self.tree))
         self.context_menu.add_command(label="Добавить в плейлист",
                                       command=lambda: self.player.add_to_playlist(self.tree))
+        self.context_menu.add_command(label="Добавить папку в плейлист",
+                                      command=lambda: self._add_folder_to_playlist())
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Открыть в проводнике", command=self._open_in_explorer)
         self.context_menu.add_command(label="Удалить", command=self._delete_item)
-        # Привязки
+
+# Привязки
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
 
@@ -231,3 +235,38 @@ class MusicCollectionUI:
 
     def update_status(self, text, color="black"):
         self.status_bar.config(text=text, fg=color)
+
+    def _add_folder_to_playlist(self):
+        """Добавляет все файлы из выбранной папки в плейлист"""
+        selected = self.tree.selection()
+        if not selected:
+            return
+
+        # Получаем данные о выбранном элементе
+        item_data = self.tree.item(selected[0])
+
+        # Если выбран файл - просто добавляем его (как раньше)
+        if item_data["values"][0] == "file":
+            self.player.add_to_playlist(self.tree)
+            return
+
+        # Если выбрана папка - собираем все файлы из нее и подпапок
+        paths = []
+        self._collect_files_from_tree(self.tree, selected[0], paths)
+
+        if paths:
+            success, message = self.player.add_to_playlist(paths=paths)
+            self.update_status(message, "green" if success else "red")
+        else:
+            self.update_status("В папке нет поддерживаемых файлов", "red")
+
+    def _collect_files_from_tree(self, tree, folder_item, paths):
+        """Рекурсивно собирает все файлы из папки в дереве"""
+        for child in tree.get_children(folder_item):
+            child_data = tree.item(child)
+            if child_data["values"][0] == "file":
+                normalized_path = self.player._normalize_path(child_data["values"][2])
+                if normalized_path and normalized_path.lower().endswith(self.player.supported_formats):
+                    paths.append(normalized_path)
+            elif child_data["values"][0] == "folder":
+                self._collect_files_from_tree(tree, child, paths)
