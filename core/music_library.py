@@ -27,7 +27,6 @@ def toggle_all(state, format_vars):
     for fmt, var in format_vars.items():
         var.set(1 if state else 0)
 
-
 class MusicLibrary:
     def __init__(self):
         self.config_file = "config.json"
@@ -65,11 +64,10 @@ class MusicLibrary:
 
         main_frame = tk.Frame(selection_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # Создаем контейнер для колонок групп
+# Создаем контейнер для колонок групп
         columns_frame = tk.Frame(main_frame)
         columns_frame.pack(fill=tk.BOTH, expand=True)
-        # Создаем 2 колонки
+# Создаем 2 колонки
         left_column = tk.Frame(columns_frame)
         left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         right_column = tk.Frame(columns_frame)
@@ -90,17 +88,14 @@ class MusicLibrary:
             'padx': 5,
             'pady': 2
         }
-        # Кнопки управления выбором
+# Кнопки управления выбором
         select_all_frame = tk.Frame(scrollable_frame)
         select_all_frame.pack(fill=tk.X, pady=5)
-        tk.Button(select_all_frame, text="Выбрать все", **main_button_style, bg="#4CAF50",
-                  fg="white", command=lambda: toggle_all(True, format_vars)).pack(
-            side=tk.LEFT, padx=2)
-        tk.Button(select_all_frame, text="Снять все", **main_button_style,  command=lambda: toggle_all(False, format_vars)).pack(
-            side=tk.LEFT)
-
+        tk.Button(select_all_frame, text="Выбрать все", **main_button_style, bg="#4CAF50", fg="white",
+                 command=lambda: toggle_all(True, format_vars)).pack(side=tk.LEFT, padx=2)
+        tk.Button(select_all_frame, text="Снять все", **main_button_style,
+                  command=lambda: toggle_all(False, format_vars)).pack(side=tk.LEFT)
         format_vars = {}
-
         # Распределяем группы по колонкам
         group_frames = []
         for i, (group_name, formats) in enumerate(self.all_formats.items()):
@@ -153,7 +148,6 @@ class MusicLibrary:
         selection_window.wait_window()
         return len(self.supported_formats) > 0
 
-
     def scan_folder(self, folder_path, clear_existing=True, parent=None):
         """Оптимизированное сканирование с прогресс-баром"""
         if not folder_path:
@@ -197,7 +191,6 @@ class MusicLibrary:
                 for entry in entries: # Если entry — папка, функция вызывает саму себя для её сканирования.
                     try:
                         full_path = os.path.abspath(os.path.join(current_path, entry))
-
                         if os.path.isdir(full_path):
                             subnode = {}
                             if scan_recursive(full_path, subnode):
