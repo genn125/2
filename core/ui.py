@@ -15,44 +15,29 @@ class MusicCollectionUI:
         self.root.title("Твои файлы")
         self.root.geometry("1200x700")
 
-        # Заголовок с отображением выбранных форматов
+        # Заголовок с отображением выбранных форматов (ГЛАВНАХ ХРЕНЬ, ОТВЕЧАЕТ ЗА РАСПОЛОЖЕНИЕ ВСЕГО ТЕКСТА СВЕРХУ)
         header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
         header_frame.pack(fill=tk.X)
 
-        # # Основной текст заголовка
-        # main_text = "ТВОЯ МУЗЫКА"
-        # formats_text = self._get_formats_header_text()
+        # Создаем отдельный Label для текста с форматами с подчеркиванием и жирным
+        formats_label = tk.Label(
+            header_frame,
+            text='ВЫБРАНЫ ДЛЯ ПОИСКА',
+            font=('Arial', 10, 'bold underline'), # bold underline' жирное подчеркивание
+            bg="#f0f0f0")
+        formats_label.pack(side=tk.LEFT, padx=(10, 0))
 
-        # # Создаем Label для основного заголовка
-        # tk.Label(
-        #     header_frame,
-        #     text=main_text,
-        #     font=('Arial', 14, 'bold'),
-        #     bg="#f0f0f0"
-        # ).pack(side=tk.LEFT)
-
-        # # Создаем отдельный Label для текста с форматами с подчеркиванием и жирным
-        # formats_label = tk.Label(
-        #     header_frame,
-        #     text=formats_text,
-        #     font=('Arial', 10, 'bold underline'),
-        #     bg="#f0f0f0",
-        #     fg="#333333"
-        # )
-        # formats_label.pack(side=tk.LEFT, padx=(10, 0))
-
-        # Создаем метку для заголовка
+        # Создаем метку для заголовка (ЭТО ВСЕ ФОРМАТЫ, КОГДА ВЫБРАНЫ)
         self.header_label = tk.Label(
             header_frame,
             text=self._get_formats_header_text(),
-            font=('Arial', 10, 'bold'),
+            font=('Arial', 10,),
             bg="#f0f0f0",
             justify = tk.LEFT) # Выравнивание по левому краю для многострочного текста
-
         self.header_label.pack(side=tk.LEFT)
 
-        tk.Label(header_frame, text=f'',
-                 font=('Arial', 14, 'bold'), bg="#f0f0f0").pack(side=tk.LEFT)
+
+
         # Toolbar с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
         toolbar.pack(fill=tk.X)
@@ -127,7 +112,7 @@ class MusicCollectionUI:
 # Привязки
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
-
+#############################################################
     def _get_formats_header_text(self):
         """Возвращает текст заголовка с информацией о выбранных форматах"""
         selected_formats = self.library.supported_formats
@@ -149,20 +134,22 @@ class MusicCollectionUI:
             if formats:
                 parts.append(f"{group}: {', '.join(formats)}")
 
-        full_text = f"Выбраны для поиска ({' | '.join(parts)})"
+        full_text = f"{' | '.join(parts)}"
 
         # Определяем максимальную длину для одной строки
         max_line_length = 150
         if len(full_text) > max_line_length:
             # Разбиваем текст на две строки
             mid_point = len(full_text) // 2
-            split_point = full_text.rfind(' | ', 0, mid_point)
+            split_point = full_text.rfind(' | ', 0, mid_point) # Поиск последнего разделителя " | " в первой половине
+            # текста. Если не найден, поиск последней запятой. Разделение текста в найденной точке
             if split_point == -1:
                 split_point = full_text.rfind(', ', 0, mid_point)
 
             if split_point != -1:
                 line1 = full_text[:split_point]
                 line2 = full_text[split_point + 2:]  # +2 чтобы пропустить разделитель
+
                 return f"{line1}\n{line2}"
 
         return f"{full_text}"
