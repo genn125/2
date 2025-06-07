@@ -11,6 +11,8 @@ class MusicCollectionApp:
         self.player = PlayerController()
         self.ui = MusicCollectionUI(root, self.library, self.player)
 
+
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = MusicCollectionApp(root)

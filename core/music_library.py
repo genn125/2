@@ -38,6 +38,7 @@ class MusicLibrary:
             'Исполняемые': ['.exe', '.msi','.iso','.zip','.rar', '.7z'],
             'Разные': ['.dll', '.py', '.pyp', '.inf', '.js', '.css']
         }
+
         self.supported_formats = []
         self.music_library = defaultdict(lambda: defaultdict(dict))
         self.previous_files = set()

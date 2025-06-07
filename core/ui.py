@@ -14,10 +14,44 @@ class MusicCollectionUI:
     def _setup_ui(self):
         self.root.title("Твои файлы")
         self.root.geometry("1200x700")
-        # Заголовок
+
+        # Заголовок с отображением выбранных форматов
         header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
         header_frame.pack(fill=tk.X)
-        tk.Label(header_frame, text="ТВОЯ МУЗЫКА",
+
+        # # Основной текст заголовка
+        # main_text = "ТВОЯ МУЗЫКА"
+        # formats_text = self._get_formats_header_text()
+
+        # # Создаем Label для основного заголовка
+        # tk.Label(
+        #     header_frame,
+        #     text=main_text,
+        #     font=('Arial', 14, 'bold'),
+        #     bg="#f0f0f0"
+        # ).pack(side=tk.LEFT)
+
+        # # Создаем отдельный Label для текста с форматами с подчеркиванием и жирным
+        # formats_label = tk.Label(
+        #     header_frame,
+        #     text=formats_text,
+        #     font=('Arial', 10, 'bold underline'),
+        #     bg="#f0f0f0",
+        #     fg="#333333"
+        # )
+        # formats_label.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Создаем метку для заголовка
+        self.header_label = tk.Label(
+            header_frame,
+            text=self._get_formats_header_text(),
+            font=('Arial', 10, 'bold'),
+            bg="#f0f0f0",
+            justify = tk.LEFT) # Выравнивание по левому краю для многострочного текста
+
+        self.header_label.pack(side=tk.LEFT)
+
+        tk.Label(header_frame, text=f'',
                  font=('Arial', 14, 'bold'), bg="#f0f0f0").pack(side=tk.LEFT)
         # Toolbar с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
@@ -94,9 +128,50 @@ class MusicCollectionUI:
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
 
+    def _get_formats_header_text(self):
+        """Возвращает текст заголовка с информацией о выбранных форматах"""
+        selected_formats = self.library.supported_formats
+        if not selected_formats:
+            return "Форматы не выбраны"
+
+        # Группируем форматы по категориям для лучшего отображения
+        format_groups = {
+            'Аудио': [f for f in selected_formats if f in self.library.all_formats['Аудио']],
+            'Изображения':[f for f in selected_formats if f in self.library.all_formats['Изображения']],
+            'Видео':[f for f in selected_formats if f in self.library.all_formats['Видео']],
+            'Документы':[f for f in selected_formats if f in self.library.all_formats['Документы']],
+            'Исполняемые': [f for f in selected_formats if f in self.library.all_formats['Исполняемые']],
+            'Разные': [f for f in selected_formats if f in self.library.all_formats['Разные']]
+        }
+        # Формируем части для отображения
+        parts = []
+        for group, formats in format_groups.items():
+            if formats:
+                parts.append(f"{group}: {', '.join(formats)}")
+
+        full_text = f"Выбраны для поиска ({' | '.join(parts)})"
+
+        # Определяем максимальную длину для одной строки
+        max_line_length = 150
+        if len(full_text) > max_line_length:
+            # Разбиваем текст на две строки
+            mid_point = len(full_text) // 2
+            split_point = full_text.rfind(' | ', 0, mid_point)
+            if split_point == -1:
+                split_point = full_text.rfind(', ', 0, mid_point)
+
+            if split_point != -1:
+                line1 = full_text[:split_point]
+                line2 = full_text[split_point + 2:]  # +2 чтобы пропустить разделитель
+                return f"{line1}\n{line2}"
+
+        return f"{full_text}"
+
     def _select_formats(self):
-        """Открывает окно выбора форматов"""
+        """Открывает окно выбора форматов и обновляет заголовок"""
         self.library.show_format_selection(self.root)
+        # Обновляем заголовок после выбора форматов
+        self.header_label.config(text=self._get_formats_header_text())
 
     def _treeview_sort_column(self, col, reverse):
         # Получаем все элементы
@@ -117,6 +192,8 @@ class MusicCollectionUI:
             if success:
                 self.update_tree_view(self.library.get_library())
                 self.update_status(message, "green")
+                # Обновляем заголовок после сканирования
+                self.header_label.config(text=self._get_formats_header_text())
             else:
                 self.update_status(message, "red")
                 if "Не выбрано ни одного формата" not in message:  # Не показываем для отмены выбора
