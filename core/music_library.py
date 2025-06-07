@@ -251,7 +251,7 @@ class MusicLibrary:
                 for name, content in node.items():
                     if name == "_files":
                         for file_name, _, is_new in content:
-                            p = doc.add_paragraph('    ' * level + f" {file_name}" + (" (NEW)" if is_new else ""))
+                            p = doc.add_paragraph('    ' * level + f" {file_name}")
                             p.runs[0].font.color.rgb = RGBColor(0, 0, 0)
                     else:
                         heading = doc.add_heading('    ' * (level - 1) + f" {name}", level=min(level + 1, 6))

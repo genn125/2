@@ -40,10 +40,10 @@ class MusicCollectionUI:
         # Treeview
         tree_frame = tk.Frame(self.root)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        self.tree = ttk.Treeview(tree_frame, columns=("type", "name", "path", "size", "date", "new"), show="headings")
+        self.tree = ttk.Treeview(tree_frame, columns=("type", "name", "path", "size", "date"), show="headings")
         self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))  # фон папок
         self.tree.tag_configure("file", background="white")  # фон файлов
-        self.tree.tag_configure("new_file", background="#e6f7ff")  # новые файлы
+        #self.tree.tag_configure("new_file", background="#e6f7ff")  # новые файлы
         # Скролл бар
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -55,14 +55,14 @@ class MusicCollectionUI:
         self.tree.heading("path", text="Путь")
         self.tree.heading("size", text="Размер", anchor=tk.W)
         self.tree.heading("date", text="Дата изменения", anchor=tk.W)
-        self.tree.heading("new", text="Статус", anchor=tk.W)
+        #self.tree.heading("new", text="Статус", anchor=tk.W)
         # Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
         self.tree.column("type", width=150, stretch=tk.YES)
         self.tree.column("name", width=220, stretch=tk.YES)
         self.tree.column("path", width=500, stretch=tk.YES)
-        self.tree.column("size", width=60, stretch=tk.YES)
-        self.tree.column("date", width=100, stretch=tk.YES)
-        self.tree.column("new", width=40, stretch=tk.YES)
+        self.tree.column("size", width=50, stretch=tk.YES)
+        self.tree.column("date", width=90, stretch=tk.YES)
+        #self.tree.column("new", width=40, stretch=tk.YES)
         # Управление плеером
         player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
         player_frame.pack(fill=tk.X)
@@ -196,7 +196,6 @@ class MusicCollectionUI:
                                 abs_path,  # Абсолютный путь
                                 size,  # Размер
                                 date,  # Дата изменения
-                                "NEW" if is_new else ""  # Статус
                             ),
                             tags=tags
                         )
