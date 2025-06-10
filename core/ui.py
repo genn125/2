@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, Menu, messagebox, filedialog
 import os
 from datetime import datetime
-from tkinter.constants import RIGHT
+
 
 
 class MusicCollectionUI:
@@ -16,11 +16,11 @@ class MusicCollectionUI:
         self.root.title("Твои файлы")
         self.root.geometry("1200x600")
 
-        # Заголовок (Фрейм) с (ГЛАВНАЯ ХРЕНЬ, ОТВЕЧАЕТ ЗА РАСПОЛОЖЕНИЕ ВСЕГО ТЕКСТА СВЕРХУ)
+# Фрейм сверху (ГЛАВНАЯ ХРЕНЬ, ОТВЕЧАЕТ ЗА РАСПОЛОЖЕНИЕ ВСЕГО ТЕКСТА СВЕРХУ)
         header_frame = tk.Frame(self.root, bg="#FFFFE0", padx=10, pady=0)  # цвет подложки светло-жёлтый
         header_frame.pack(fill=tk.X)
 
-        # Метка "ПОИСК:" жирным шрифтом
+# Метка "ПОИСК:" жирным шрифтом
         search_label = tk.Label(
             header_frame,
             text="ПОИСК:",
@@ -29,16 +29,16 @@ class MusicCollectionUI:
         )
         search_label.pack(side=tk.LEFT)
 
-        # Фрейм для категорий форматов
+# Фрейм для категорий форматов
         formats_frame = tk.Frame(header_frame)
         formats_frame.pack(side=tk.LEFT, padx=(10,500))
 
-        # Метка (многострочная) для отображения форматов
+# Метка (многострочная) для отображения форматов
         self.formats_text = tk.Text(
             formats_frame,
             height=2, # высота в строках
             width=55, # ширина в символах.
-            bg="#20B2AA", # цвет подложки «светлый морской зелёный»
+            bg="#FFEFD5", # цвет подложки
             font=('Arial', 10),
             wrap=tk.WORD, # WORD позволяет переносить слова на новую строку целиком, а не по буквам.
             padx=10,
@@ -47,66 +47,70 @@ class MusicCollectionUI:
             bd=0,
             highlightthickness=0
         )
-        #self.formats_text.pack()
-        # Скролл бар для выбранных категорий
+
+# Скролл бар для выбранных категорий
         scrollbar = ttk.Scrollbar(formats_frame, orient="vertical", command=self.formats_text.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.formats_text.config(yscrollcommand=scrollbar.set)
         self.formats_text.pack(fill=tk.BOTH, expand=True)
 
-
         self._update_formats_display()
 
-        # Toolbar с кнопками
+# Туллбар с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
         toolbar.pack(fill=tk.X)
-        # Кнопка сканирования слева
+
+# Кнопка сканирования слева
         scan_btn = tk.Button(toolbar, text="📁 Сканировать папку", command=self._scan_folder,
                              bd=1, relief=tk.RIDGE, padx=10)
         scan_btn.pack(side=tk.LEFT, padx=5)
-        # Кнопки справа
+
+# Кнопки справа
         right_frame = tk.Frame(toolbar)
         right_frame.pack(side=tk.RIGHT)
-        # Кнопка выбора форматов
+
+# Кнопка выбора форматов
         formats_btn = tk.Button(right_frame, text="⚙️ Выбрать форматы", command=self._select_formats,
                                 bd=1, relief=tk.RAISED, padx=10)
         formats_btn.pack(side=tk.LEFT, padx=5)
-        # Кнопка сохранения
+
+# Кнопка сохранения
         save_btn = tk.Button(right_frame, text="💾 Сохранить в DOCX", command=self._save_collection,
                              bd=1, relief=tk.RAISED, padx=10)
         save_btn.pack(side=tk.LEFT, padx=5)
 
-        # Treeview
+# Treeview
         tree_frame = tk.Frame(self.root)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=0)
         self.tree = ttk.Treeview(tree_frame, columns=("type", "name", "path", "size", "date"), show="headings")
-        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))
-        self.tree.tag_configure("file", background="white")
+        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))  # фон папок
+        self.tree.tag_configure("file", background="#FFFFE0") # фон файлов
 
-        # Скролл бар основного окна с файлами
-        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        scrollbar.pack(side=tk.LEFT, fill=tk.Y)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(fill=tk.BOTH, expand=True)
-
-        # Настройка колонок, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - ве
+# Настройка колонок, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - ве
         self.tree.heading("type", text="Тип", anchor=tk.CENTER)
         self.tree.heading("name", text="Название")
+        #self.tree.configure("file", background="#FFFFE0")
         self.tree.heading("path", text="Путь")
         self.tree.heading("size", text="Размер", anchor=tk.W)
         self.tree.heading("date", text="Дата изменения", anchor=tk.W)
 
-        # Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
+# Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
         self.tree.column("type", width=150, stretch=tk.YES)
         self.tree.column("name", width=220, stretch=tk.YES)
         self.tree.column("path", width=500, stretch=tk.YES)
         self.tree.column("size", width=50, stretch=tk.YES)
         self.tree.column("date", width=90, stretch=tk.YES)
 
-        # Управление плеером
+# Скролл бар основного окна с файлами
+        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(fill=tk.BOTH, expand=True)
+
+# Управление плеером
         player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
         player_frame.pack(fill=tk.X)
-        # Кнопки плеера
+# Кнопки плеера
         player_buttons = [
             ("▶ Воспроизвести", lambda: self.player.play_selected(self.tree)),
             ("⏏ В плейлист", lambda: self.player.add_to_playlist(self.tree)),
@@ -123,6 +127,7 @@ class MusicCollectionUI:
 
         # Контекстное меню
         self.context_menu = Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Открыть", command=self._open_file_with_default_app)
         self.context_menu.add_command(label="Воспроизвести",
                                       command=lambda: self.player.play_selected(self.tree))
         self.context_menu.add_command(label="Добавить в плейлист",
@@ -136,6 +141,27 @@ class MusicCollectionUI:
         # Привязки
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
+
+    def _open_file_with_default_app(self):
+        """Открывает выбранный файл в программе по умолчанию"""
+        selected_items = self.tree.selection()
+        if not selected_items:
+            return
+
+        for item in selected_items:
+            item_data = self.tree.item(item)
+            if item_data["values"][0] == "file":
+                file_path = item_data["values"][2]
+                if os.path.exists(file_path):
+                    try:
+                        if os.name == 'nt':  # Для Windows
+                            os.startfile(file_path)
+                        # elif os.name == 'posix':  # Для Linux и Mac
+                        #     subprocess.run(['xdg-open', file_path])
+                    except Exception as e:
+                        messagebox.showerror("Ошибка", f"Не удалось открыть файл:\n{str(e)}")
+                else:
+                    messagebox.showerror("Ошибка", f"Файл не найден:\n{file_path}")
 
     def _update_formats_display(self):
         """Обновляет отображение форматов с жирными названиями категорий"""
