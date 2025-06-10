@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, Menu, messagebox, filedialog
 import os
 from datetime import datetime
+from tkinter.constants import RIGHT
 
 
 class MusicCollectionUI:
@@ -13,73 +14,95 @@ class MusicCollectionUI:
 
     def _setup_ui(self):
         self.root.title("Твои файлы")
-        self.root.geometry("1200x700")
+        self.root.geometry("1200x600")
 
-        # Заголовок с отображением выбранных форматов (ГЛАВНАХ ХРЕНЬ, ОТВЕЧАЕТ ЗА РАСПОЛОЖЕНИЕ ВСЕГО ТЕКСТА СВЕРХУ)
-        header_frame = tk.Frame(self.root, bg="#f0f0f0", padx=10, pady=10)
+        # Заголовок (Фрейм) с (ГЛАВНАЯ ХРЕНЬ, ОТВЕЧАЕТ ЗА РАСПОЛОЖЕНИЕ ВСЕГО ТЕКСТА СВЕРХУ)
+        header_frame = tk.Frame(self.root, bg="#FFFFE0", padx=10, pady=0)  # цвет подложки светло-жёлтый
         header_frame.pack(fill=tk.X)
 
-        # Создаем отдельный Label для текста с форматами с подчеркиванием и жирным
-        formats_label = tk.Label(
+        # Метка "ПОИСК:" жирным шрифтом
+        search_label = tk.Label(
             header_frame,
-            text='ПОИСК:',
-            font=('Arial', 10, 'bold underline'), # bold underline' жирное подчеркивание
-            bg="#f0f0f0")
-        formats_label.pack(side=tk.LEFT, padx=(10, 0))
+            text="ПОИСК:",
+            font=('Arial', 10, 'bold underline'),
+            bg="#FFFFE0" # цвет подложки светло-жёлтый
+        )
+        search_label.pack(side=tk.LEFT)
 
-        # Создаем метку для заголовка (ЭТО ВСЕ ФОРМАТЫ, КОГДА ВЫБРАНЫ)
-        self.header_label = tk.Label(
-            header_frame,
-            text=self._get_formats_header_text(),
-            font=('Arial', 10,),
-            bg="#f0f0f0",
-            justify = tk.LEFT) # Выравнивание по левому краю для многострочного текста
-        self.header_label.pack(side=tk.LEFT)
+        # Фрейм для категорий форматов
+        formats_frame = tk.Frame(header_frame)
+        formats_frame.pack(side=tk.LEFT, padx=(10,500))
+
+        # Метка (многострочная) для отображения форматов
+        self.formats_text = tk.Text(
+            formats_frame,
+            height=2, # высота в строках
+            width=55, # ширина в символах.
+            bg="#20B2AA", # цвет подложки «светлый морской зелёный»
+            font=('Arial', 10),
+            wrap=tk.WORD, # WORD позволяет переносить слова на новую строку целиком, а не по буквам.
+            padx=10,
+            pady=10,
+            relief=tk.FLAT,
+            bd=0,
+            highlightthickness=0
+        )
+        #self.formats_text.pack()
+        # Скролл бар для выбранных категорий
+        scrollbar = ttk.Scrollbar(formats_frame, orient="vertical", command=self.formats_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.formats_text.config(yscrollcommand=scrollbar.set)
+        self.formats_text.pack(fill=tk.BOTH, expand=True)
+
+
+        self._update_formats_display()
 
         # Toolbar с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
         toolbar.pack(fill=tk.X)
         # Кнопка сканирования слева
-        scan_btn = tk.Button(toolbar, text="📁 Сканировать папку", command=self._scan_folder, bd=1, relief=tk.RIDGE,
-                             padx=10)
+        scan_btn = tk.Button(toolbar, text="📁 Сканировать папку", command=self._scan_folder,
+                             bd=1, relief=tk.RIDGE, padx=10)
         scan_btn.pack(side=tk.LEFT, padx=5)
         # Кнопки справа
         right_frame = tk.Frame(toolbar)
         right_frame.pack(side=tk.RIGHT)
         # Кнопка выбора форматов
-        formats_btn = tk.Button(right_frame, text="⚙️ Выбрать форматы", command=self._select_formats, bd=1,
-                                relief=tk.RAISED, padx=10)
+        formats_btn = tk.Button(right_frame, text="⚙️ Выбрать форматы", command=self._select_formats,
+                                bd=1, relief=tk.RAISED, padx=10)
         formats_btn.pack(side=tk.LEFT, padx=5)
         # Кнопка сохранения
-        save_btn = tk.Button(right_frame, text="💾 Сохранить в DOCX", command=self._save_collection, bd=1,
-                             relief=tk.RAISED, padx=10)
+        save_btn = tk.Button(right_frame, text="💾 Сохранить в DOCX", command=self._save_collection,
+                             bd=1, relief=tk.RAISED, padx=10)
         save_btn.pack(side=tk.LEFT, padx=5)
+
         # Treeview
         tree_frame = tk.Frame(self.root)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         self.tree = ttk.Treeview(tree_frame, columns=("type", "name", "path", "size", "date"), show="headings")
-        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))  # фон папок
-        self.tree.tag_configure("file", background="white")  # фон файлов
-        #self.tree.tag_configure("new_file", background="#e6f7ff")  # новые файлы
-        # Скролл бар
+        self.tree.tag_configure("folder", background="#f0f0f0", font=('Arial', 10, 'bold'))
+        self.tree.tag_configure("file", background="white")
+
+        # Скролл бар основного окна с файлами
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.pack(side=tk.LEFT, fill=tk.Y)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(fill=tk.BOTH, expand=True)
-        # Настраиваем колонки, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - верх, s - низ
+
+        # Настройка колонок, anchor - выравнивание (если нет - CENTER) n - право, w - лево, n - ве
         self.tree.heading("type", text="Тип", anchor=tk.CENTER)
         self.tree.heading("name", text="Название")
         self.tree.heading("path", text="Путь")
         self.tree.heading("size", text="Размер", anchor=tk.W)
         self.tree.heading("date", text="Дата изменения", anchor=tk.W)
-        #self.tree.heading("new", text="Статус", anchor=tk.W)
+
         # Настраиваем параметры колонок, width - ширина, tk.NO - запрет растяжения, anchor - выравнивание
         self.tree.column("type", width=150, stretch=tk.YES)
         self.tree.column("name", width=220, stretch=tk.YES)
         self.tree.column("path", width=500, stretch=tk.YES)
         self.tree.column("size", width=50, stretch=tk.YES)
         self.tree.column("date", width=90, stretch=tk.YES)
-        #self.tree.column("new", width=40, stretch=tk.YES)
+
         # Управление плеером
         player_frame = tk.Frame(self.root, bg="#e0e0e0", padx=10, pady=8)
         player_frame.pack(fill=tk.X)
@@ -92,13 +115,16 @@ class MusicCollectionUI:
         for text, cmd in player_buttons:
             btn = tk.Button(player_frame, text=text, command=cmd, bg="#f8f8f8", padx=10)
             btn.pack(side=tk.LEFT, padx=5)
+
         # Строка состояния
-        self.status_bar = tk.Label(player_frame, text="Готов к работе", bg="#e0e0e0", fg="#333333", anchor=tk.W)
+        self.status_bar = tk.Label(player_frame, text="Готов к работе", bg="#e0e0e0",
+                                   fg="#333333", anchor=tk.W)
         self.status_bar.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
 
-# Контекстное меню
+        # Контекстное меню
         self.context_menu = Menu(self.root, tearoff=0)
-        self.context_menu.add_command(label="Воспроизвести", command=lambda: self.player.play_selected(self.tree))
+        self.context_menu.add_command(label="Воспроизвести",
+                                      command=lambda: self.player.play_selected(self.tree))
         self.context_menu.add_command(label="Добавить в плейлист",
                                       command=lambda: self.player.add_to_playlist(self.tree))
         self.context_menu.add_command(label="Добавить папку в плейлист",
@@ -107,81 +133,71 @@ class MusicCollectionUI:
         self.context_menu.add_command(label="Открыть в проводнике", command=self._open_in_explorer)
         self.context_menu.add_command(label="Удалить", command=self._delete_item)
 
-# Привязки
+        # Привязки
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.player.play_selected(self.tree))
-#############################################################
-    def _get_formats_header_text(self):
-        """Возвращает текст заголовка с информацией о выбранных форматах"""
+
+    def _update_formats_display(self):
+        """Обновляет отображение форматов с жирными названиями категорий"""
+        self.formats_text.config(state=tk.NORMAL)
+        self.formats_text.delete(1.0, tk.END)
+
         selected_formats = self.library.supported_formats
         if not selected_formats:
-            return "Форматы не выбраны"
+            self.formats_text.insert(tk.END, "Форматы не выбраны")
+            self.formats_text.config(state=tk.DISABLED)
+            return
 
-        # Группируем форматы по категориям для лучшего отображения
+        # Группируем форматы по категориям
         format_groups = {
             'Аудио': [f for f in selected_formats if f in self.library.all_formats['Аудио']],
-            'Изображения':[f for f in selected_formats if f in self.library.all_formats['Изображения']],
-            'Видео':[f for f in selected_formats if f in self.library.all_formats['Видео']],
-            'Документы':[f for f in selected_formats if f in self.library.all_formats['Документы']],
+            'Изображения': [f for f in selected_formats if f in self.library.all_formats['Изображения']],
+            'Видео': [f for f in selected_formats if f in self.library.all_formats['Видео']],
+            'Документы': [f for f in selected_formats if f in self.library.all_formats['Документы']],
             'Исполняемые': [f for f in selected_formats if f in self.library.all_formats['Исполняемые']],
             'Разные': [f for f in selected_formats if f in self.library.all_formats['Разные']]
         }
-        # Формируем части для отображения
-        parts = []
+
+        # Добавляем каждую категорию с жирным названием
+        first_line = True
         for group, formats in format_groups.items():
             if formats:
-                parts.append(f"{group}: {', '.join(formats)}")
+                if not first_line:
+                    self.formats_text.insert(tk.END, "\n")
+                self.formats_text.insert(tk.END, group + ":   ", 'bold')
+                self.formats_text.insert(tk.END, ', '.join(formats))
+                first_line = False
 
-        full_text = f"{'; '.join(parts)}"
-
-        # Определяем максимальную длину для одной строки
-        max_line_length = 50
-        if len(full_text) > max_line_length:
-            # Разбиваем текст на две строки
-            mid_point = len(full_text) // 2
-            split_point = full_text.rfind(' | ', 0, mid_point) # Поиск последнего разделителя " | " в первой половине
-            # текста. Если не найден, поиск последней запятой. Разделение текста в найденной точке
-            if split_point == -1:
-                split_point = full_text.rfind(', ', 0, mid_point)
-
-            if split_point != -1:
-                line1 = full_text[:split_point]
-                line2 = full_text[split_point + 2:]  # +2 чтобы пропустить разделитель
-
-                return f"{line1}\n{line2}"
-
-        return f"{full_text} ggggg"
+        # Настраиваем тег для жирного текста
+        self.formats_text.tag_config('bold', font=('Arial', 10, 'bold'))
+        self.formats_text.config(state=tk.DISABLED)
 
     def _select_formats(self):
-        """Открывает окно выбора форматов и обновляет заголовок"""
+        """Открывает окно выбора форматов и обновляет отображение"""
         self.library.show_format_selection(self.root)
-        # Обновляем заголовок после выбора форматов
-        self.header_label.config(text=self._get_formats_header_text())
+        self._update_formats_display()
 
     def _treeview_sort_column(self, col, reverse):
-        # Получаем все элементы
         items = [(self.tree.set(k, col), k) for k in self.tree.get_children("")]
         # Сортируем элементы
         items.sort(reverse=reverse)
         # Перемещаем элементы в отсортированном порядке
         for index, (val, k) in enumerate(items):
             self.tree.move(k, "", index)
-        # Устанавливаем обратную сортировку для следующего клика
+            # Устанавливаем обратную сортировку для следующего клика
         self.tree.heading(col, command=lambda: self._treeview_sort_column(col, not reverse))
 
     def _scan_folder(self):
-        folder_path = filedialog.askdirectory(title="Выберите папку с музыкой")
+        folder_path = filedialog.askdirectory(title="Выберите папку для сканирования")
         if folder_path:
-            # Передаем self.root как parent для окна выбора форматов
             success, message = self.library.scan_folder(folder_path, parent=self.root)
             if success:
                 self.update_tree_view(self.library.get_library())
                 self.update_status(message, "green")
-                # Обновляем заголовок после сканирования
-                self.header_label.config(text=self._get_formats_header_text())
+                self._update_formats_display()
             else:
                 self.update_status(message, "red")
-                if "Не выбрано ни одного формата" not in message:  # Не показываем для отмены выбора
+                if "Не выбрано ни одного формата" not in message:
                     messagebox.showwarning("Внимание", message)
 
     def _save_collection(self):
@@ -217,8 +233,7 @@ class MusicCollectionUI:
             self.update_status(f"Удалено {len(selected_items)} элементов", "orange")
 
     def _delete_item_recursive(self, item):
-        # Заглушка для реализации удаления
-        pass
+        pass  # Заглушка для реализации удаления
 
     def _find_folder_path(self, folder_item):
         # Поиск пути к папке
@@ -245,44 +260,37 @@ class MusicCollectionUI:
                         date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%Y-%m-%d %H:%M')
 
                         # Определяем теги для отображения
-                        tags = ("new_file",) if is_new else ("file",)
-
+                        tags = ("file",)
                         # Вставляем данные в treeview
                         self.tree.insert(
                             parent_id,
                             "end",
                             text=file_name,
                             values=(
-                                "file",  # Тип элемента (добавлено)
-                                file_name,  # Название
-                                abs_path,  # Абсолютный путь
-                                size,  # Размер
-                                date,  # Дата изменения
+                                "file",  # Вставляем данные в treeview
+                                file_name, # Название
+                                abs_path, # Абсолютный путь
+                                size, # Размер
+                                date, # Дата изменения
                             ),
                             tags=tags
                         )
 
-                    except FileNotFoundError:
-                        print(f"Файл не найден: {file_path}")
-                        continue
-                    except PermissionError:
-                        print(f"Нет доступа к файлу: {file_path}")
-                        continue
-                    except Exception as e:
+                    except (FileNotFoundError, PermissionError) as e:
                         print(f"Ошибка обработки файла {file_path}: {str(e)}")
                         continue
 
-            else:  # Обработка папок
+            else: # Обработка папок
                 folder_id = self.tree.insert(
                     parent_id,
                     "end",
                     text=name,
                     values=(
                         name,  # Название папки
-                        "",  # Путь (пусто для папок)
-                        "",  # Размер (пусто)
-                        "",  # Дата (пусто)
-                        ""  # Статус (пусто)
+                        "", # Путь (пусто для папок)
+                        "", # Размер (пусто)
+                        "", # Дата (пусто)
+                        "" # Статус (пусто)
                     ),
                     tags=("folder",)
                 )
@@ -302,11 +310,9 @@ class MusicCollectionUI:
         selected = self.tree.selection()
         if not selected:
             return
-
         # Получаем данные о выбранном элементе
         item_data = self.tree.item(selected[0])
-
-        # Если выбран файл - просто добавляем его (как раньше)
+        # Если выбран файл - просто добавляем его
         if item_data["values"][0] == "file":
             self.player.add_to_playlist(self.tree)
             return
@@ -331,3 +337,4 @@ class MusicCollectionUI:
                     paths.append(normalized_path)
             elif child_data["values"][0] == "folder":
                 self._collect_files_from_tree(tree, child, paths)
+
