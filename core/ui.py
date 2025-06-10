@@ -22,7 +22,7 @@ class MusicCollectionUI:
         # Создаем отдельный Label для текста с форматами с подчеркиванием и жирным
         formats_label = tk.Label(
             header_frame,
-            text='ВЫБРАНЫ ДЛЯ ПОИСКА',
+            text='ПОИСК:',
             font=('Arial', 10, 'bold underline'), # bold underline' жирное подчеркивание
             bg="#f0f0f0")
         formats_label.pack(side=tk.LEFT, padx=(10, 0))
@@ -35,8 +35,6 @@ class MusicCollectionUI:
             bg="#f0f0f0",
             justify = tk.LEFT) # Выравнивание по левому краю для многострочного текста
         self.header_label.pack(side=tk.LEFT)
-
-
 
         # Toolbar с кнопками
         toolbar = tk.Frame(self.root, padx=5, pady=5)
@@ -134,10 +132,10 @@ class MusicCollectionUI:
             if formats:
                 parts.append(f"{group}: {', '.join(formats)}")
 
-        full_text = f"{' | '.join(parts)}"
+        full_text = f"{'; '.join(parts)}"
 
         # Определяем максимальную длину для одной строки
-        max_line_length = 150
+        max_line_length = 50
         if len(full_text) > max_line_length:
             # Разбиваем текст на две строки
             mid_point = len(full_text) // 2
@@ -152,7 +150,7 @@ class MusicCollectionUI:
 
                 return f"{line1}\n{line2}"
 
-        return f"{full_text}"
+        return f"{full_text} ggggg"
 
     def _select_formats(self):
         """Открывает окно выбора форматов и обновляет заголовок"""
